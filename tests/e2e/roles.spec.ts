@@ -56,19 +56,22 @@ test("school admin sees users with their roles", async ({ page, isMobile }) => {
   if (!isMobile) await expect(teacherRow.getByText("Main Campus", { exact: true })).toBeVisible();
 });
 
-test("teacher only sees what a teacher needs", async ({ page, isMobile }) => {
+test("teacher sees every tab but can only open teacher pages", async ({ page, isMobile }) => {
   await signInAs(page, "teacher@demo-hodan.example");
   const nav = await openNav(page, isMobile);
   await expect(nav.getByRole("link", { name: "Attendance" })).toBeVisible();
-  for (const hidden of [
+  // Every tab is listed; the ones a teacher may not use are disabled, not links.
+  for (const disabled of [
     "Users",
     "Branches",
     "School Fees",
     "Roles & Permissions",
     "School Profile",
   ]) {
-    await expect(nav.getByRole("link", { name: hidden })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: disabled })).toHaveCount(0);
+    await expect(nav.locator("[aria-disabled=true]", { hasText: disabled })).toBeVisible();
   }
+  if (isMobile) await page.keyboard.press("Escape");
   // Direct URLs are refused on the server too.
   for (const path of [
     "/settings/users",
@@ -98,6 +101,7 @@ test("platform admin manages school registrations on School Profile", async ({
   const nav = await openNav(page, isMobile);
   await expect(nav.getByRole("link", { name: "School Profile" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Students" })).toHaveCount(0);
+  await expect(nav.locator("[aria-disabled=true]", { hasText: "Students" })).toBeVisible();
 
   await page.goto("/settings/school-registrations");
   await expect(page).toHaveURL(/\/settings\/school-profile$/);

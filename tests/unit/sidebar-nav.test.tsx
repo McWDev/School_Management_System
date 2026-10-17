@@ -11,12 +11,17 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "School Fees" })).not.toHaveAttribute("aria-current");
   });
 
-  it("shows only permitted items when permissions are given", () => {
+  it("lists every tab but links only the permitted ones", () => {
     render(<SidebarNav permissions={["students.read"]} />);
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Dashboard",
       "Students",
     ]);
+    // Other tabs stay visible, disabled, with an accessible "no access" hint.
+    const users = screen.getByText("Users").closest("[aria-disabled]");
+    expect(users).toHaveAttribute("aria-disabled", "true");
+    expect(users).toHaveTextContent("Users (no access)");
+    expect(screen.getByText("School Fees").closest("[aria-disabled]")).not.toBeNull();
   });
 
   it("keeps accessible names when collapsed", () => {
