@@ -20,7 +20,15 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@node-rs/argon2"],
   async redirects() {
     // The proxy sends signed-out visitors on to /login.
-    return [{ source: "/", destination: "/dashboard", permanent: false }];
+    return [
+      { source: "/", destination: "/dashboard", permanent: false },
+      // School registrations live on the School Profile page (02-Product-Decisions.md).
+      {
+        source: "/settings/school-registrations",
+        destination: "/settings/school-profile",
+        permanent: true,
+      },
+    ];
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

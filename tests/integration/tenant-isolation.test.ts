@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { hasDatabase, uniqueSuffix } from "./helpers";
-import { inArray, sql } from "drizzle-orm";
+import { deleteTestData, hasDatabase, uniqueSuffix } from "./helpers";
+import { sql } from "drizzle-orm";
 import { getDb, getPool } from "@/db";
-import { branches, tenants } from "@/db/schema";
+
 import * as branchRepo from "@/features/branches/repository";
 import * as tenantRepo from "@/features/tenants/repository";
 import * as errors from "@/lib/errors";
@@ -16,7 +16,7 @@ import { createPlatformContext, createTenantContext } from "@/lib/tenant-context
  */
 describe.skipIf(!hasDatabase)("tenant and branch isolation", () => {
   const run = uniqueSuffix();
-  const platform = createPlatformContext();
+  const platform = createPlatformContext({ permissions: "all" });
   const school = (code: string) => ({
     schoolCode: `T${run}-${code}`,
     name: `Test School ${code} ${run}`,
@@ -41,23 +41,22 @@ describe.skipIf(!hasDatabase)("tenant and branch isolation", () => {
     await tenantRepo.changeSchoolStatus(platform, schoolA.id, { action: "approve" });
     await tenantRepo.changeSchoolStatus(platform, schoolB.id, { action: "approve" });
 
-    adminA = createTenantContext({ tenantId: schoolA.id, branchScope: "all" });
-    adminB = createTenantContext({ tenantId: schoolB.id, branchScope: "all" });
+    adminA = createTenantContext({ tenantId: schoolA.id, branchScope: "all", permissions: "all" });
+    adminB = createTenantContext({ tenantId: schoolB.id, branchScope: "all", permissions: "all" });
 
     branchA1 = await branchRepo.createBranch(adminA, { branchCode: "main", name: "A Main" });
     branchA2 = await branchRepo.createBranch(adminA, { branchCode: "north", name: "A North" });
     branchB1 = await branchRepo.createBranch(adminB, { branchCode: "main", name: "B Main" });
 
-    branchAdminA1 = createTenantContext({ tenantId: schoolA.id, branchScope: [branchA1.id] });
+    branchAdminA1 = createTenantContext({
+      tenantId: schoolA.id,
+      branchScope: [branchA1.id],
+      permissions: "all",
+    });
   });
 
   afterAll(async () => {
-    // Test-only cleanup of synthetic rows (the app itself never hard-deletes).
-    const db = getDb();
-    if (createdTenantIds.length) {
-      await db.delete(branches).where(inArray(branches.tenantId, createdTenantIds));
-      await db.delete(tenants).where(inArray(tenants.id, createdTenantIds));
-    }
+    await deleteTestData(createdTenantIds);
     await getPool().end();
   });
 
@@ -91,7 +90,11 @@ describe.skipIf(!hasDatabase)("tenant and branch isolation", () => {
     });
 
     it("cannot reach another school's branch by putting it in the branch scope", async () => {
-      const forged = createTenantContext({ tenantId: schoolA.id, branchScope: [branchB1.id] });
+      const forged = createTenantContext({
+        tenantId: schoolA.id,
+        branchScope: [branchB1.id],
+        permissions: "all",
+      });
       await expect(branchRepo.getBranch(forged, branchB1.id)).rejects.toBeInstanceOf(
         errors.NotFoundError,
       );
@@ -154,7 +157,11 @@ describe.skipIf(!hasDatabase)("tenant and branch isolation", () => {
     });
 
     it("sees nothing with an empty branch scope", async () => {
-      const none = createTenantContext({ tenantId: schoolA.id, branchScope: [] });
+      const none = createTenantContext({
+        tenantId: schoolA.id,
+        branchScope: [],
+        permissions: "all",
+      });
       expect((await branchRepo.listBranches(none)).total).toBe(0);
     });
 

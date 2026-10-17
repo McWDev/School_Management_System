@@ -5,11 +5,14 @@ import { TopBar } from "./top-bar";
 export function AppShell({
   permissions,
   account,
+  contextLabel,
   children,
 }: {
   permissions?: readonly string[];
   /** Account menu slot for the top bar (streams in after the session is read). */
   account?: React.ReactNode;
+  /** Current school name (or "Platform administration"), shown in the top bar. */
+  contextLabel?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -22,7 +25,7 @@ export function AppShell({
       </a>
       <AppSidebar permissions={permissions} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar permissions={permissions} account={account} />
+        <TopBar permissions={permissions} account={account} contextLabel={contextLabel} />
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-6">{children}</div>
         </main>

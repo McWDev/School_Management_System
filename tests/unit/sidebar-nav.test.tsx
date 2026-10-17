@@ -12,7 +12,7 @@ describe("SidebarNav", () => {
   });
 
   it("shows only permitted items when permissions are given", () => {
-    render(<SidebarNav permissions={["dashboard.read", "students.read"]} />);
+    render(<SidebarNav permissions={["students.read"]} />);
     expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual([
       "Dashboard",
       "Students",

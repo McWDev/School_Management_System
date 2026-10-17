@@ -2,6 +2,8 @@ import "server-only";
 import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
 import { tenants, type Tenant } from "@/db/schema";
+import { ensureSchoolRoles } from "@/features/roles/presets";
+import { recordAudit } from "@/lib/audit";
 import {
   ConflictError,
   InvalidStateError,
@@ -10,7 +12,13 @@ import {
   ValidationError,
 } from "@/lib/errors";
 import { escapeLike, paginationSchema, toOffset, toPage, type Page } from "@/lib/pagination";
-import { assertAllBranches, type PlatformContext, type TenantContext } from "@/lib/tenant-context";
+import type { Permission } from "@/lib/permissions/catalog";
+import {
+  assertAllBranches,
+  assertPermission,
+  type PlatformContext,
+  type TenantContext,
+} from "@/lib/tenant-context";
 import { parseInput } from "@/lib/validation";
 import { uuidSchema } from "@/lib/validation/fields";
 import {
@@ -19,17 +27,34 @@ import {
   schoolRegistrationSchema,
   statusChangeSchema,
 } from "./schemas";
-import { resolveTenantTransition } from "./status";
+import { resolveTenantTransition, type TenantStatusAction } from "./status";
 
 /*
- * Schools (tenants). Platform functions take a PlatformContext; a school's own
- * functions take a TenantContext and can only ever touch ctx.tenantId.
- * Permission checks (schools.*, settings.manage) are layered on in Task 06.
+ * Schools (tenants). Platform functions take a PlatformContext with schools.*
+ * permissions; a school's own functions take a TenantContext and can only
+ * ever touch ctx.tenantId. All changes are audited in the same transaction.
  */
 
-function assertPlatform(ctx: PlatformContext) {
+const STATUS_ACTION_PERMISSION: Record<TenantStatusAction, Permission> = {
+  approve: "schools.activate",
+  reactivate: "schools.activate",
+  reject: "schools.suspend",
+  suspend: "schools.suspend",
+  archive: "schools.suspend",
+};
+
+const STATUS_AUDIT_ACTION: Record<TenantStatusAction, string> = {
+  approve: "school.approved",
+  reactivate: "school.reactivated",
+  reject: "school.rejected",
+  suspend: "school.suspended",
+  archive: "school.archived",
+};
+
+function assertPlatform(ctx: PlatformContext, permission: Permission) {
   // Guards JS callers and casts; TypeScript already rejects a TenantContext here.
   if (ctx?.kind !== "platform") throw new NotFoundError();
+  assertPermission(ctx, permission);
 }
 
 function parseId(id: string): string {
@@ -40,15 +65,30 @@ function parseId(id: string): string {
 
 // ---------------------------------------------------------------- platform
 
+/** Register a school (status pending) and create its preset roles. */
 export async function registerSchool(ctx: PlatformContext, input: unknown): Promise<Tenant> {
-  assertPlatform(ctx);
+  assertPlatform(ctx, "schools.create");
   const data = parseInput(schoolRegistrationSchema, input);
   try {
-    const [tenant] = await getDb()
-      .insert(tenants)
-      .values({ ...data, status: "pending" })
-      .returning();
-    return tenant;
+    return await getDb().transaction(async (tx) => {
+      const [tenant] = await tx
+        .insert(tenants)
+        .values({ ...data, status: "pending" })
+        .returning();
+      await ensureSchoolRoles(tenant.id, tx);
+      await recordAudit(
+        {
+          tenantId: tenant.id,
+          actorUserId: ctx.actorUserId,
+          action: "school.registered",
+          entityType: "school",
+          entityId: tenant.id,
+          after: tenant,
+        },
+        tx,
+      );
+      return tenant;
+    });
   } catch (error) {
     if (isUniqueViolation(error, "tenants_school_code_unique")) {
       throw new ConflictError("This school code is already registered.", {
@@ -64,7 +104,7 @@ export async function listSchools(
   filters: unknown = {},
   pagination: unknown = {},
 ): Promise<Page<Tenant>> {
-  assertPlatform(ctx);
+  assertPlatform(ctx, "schools.read");
   const { status, search } = schoolListFilterSchema.parse(filters);
   const pageInput = paginationSchema.parse(pagination);
 
@@ -90,7 +130,7 @@ export async function listSchools(
 }
 
 export async function getSchool(ctx: PlatformContext, schoolId: string): Promise<Tenant> {
-  assertPlatform(ctx);
+  assertPlatform(ctx, "schools.read");
   const [tenant] = await getDb()
     .select()
     .from(tenants)
@@ -105,9 +145,10 @@ export async function changeSchoolStatus(
   schoolId: string,
   input: unknown,
 ): Promise<Tenant> {
-  assertPlatform(ctx);
+  if (ctx?.kind !== "platform") throw new NotFoundError();
   const id = parseId(schoolId);
   const { action, reason } = parseInput(statusChangeSchema, input);
+  assertPermission(ctx, STATUS_ACTION_PERMISSION[action]);
 
   return getDb().transaction(async (tx) => {
     // Lock the row so concurrent status changes cannot both succeed.
@@ -129,12 +170,26 @@ export async function changeSchoolStatus(
       .set({ status: result.to, statusReason: reason?.trim() || null, statusChangedAt: new Date() })
       .where(eq(tenants.id, id))
       .returning();
+    await recordAudit(
+      {
+        tenantId: id,
+        actorUserId: ctx.actorUserId,
+        action: STATUS_AUDIT_ACTION[action],
+        entityType: "school",
+        entityId: id,
+        before: { status: current.status },
+        after: { status: updated.status },
+        reason,
+      },
+      tx,
+    );
     return updated;
   });
 }
 
 // ------------------------------------------------------------ own school
 
+/** The actor's own school. Any member of the school may read its basic details. */
 export async function getOwnSchool(ctx: TenantContext): Promise<Tenant> {
   const [tenant] = await getDb().select().from(tenants).where(eq(tenants.id, ctx.tenantId));
   if (!tenant) throw new NotFoundError();
@@ -143,13 +198,33 @@ export async function getOwnSchool(ctx: TenantContext): Promise<Tenant> {
 
 /** Update the school's own details. Status and school code are not editable here. */
 export async function updateOwnSchoolDetails(ctx: TenantContext, input: unknown): Promise<Tenant> {
+  assertPermission(ctx, "settings.manage");
   assertAllBranches(ctx);
   const data = parseInput(schoolDetailsSchema, input);
-  const [updated] = await getDb()
-    .update(tenants)
-    .set(data)
-    .where(eq(tenants.id, ctx.tenantId))
-    .returning();
-  if (!updated) throw new NotFoundError();
-  return updated;
+  return getDb().transaction(async (tx) => {
+    const [before] = await tx
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, ctx.tenantId))
+      .for("update");
+    if (!before) throw new NotFoundError();
+    const [updated] = await tx
+      .update(tenants)
+      .set(data)
+      .where(eq(tenants.id, ctx.tenantId))
+      .returning();
+    await recordAudit(
+      {
+        tenantId: ctx.tenantId,
+        actorUserId: ctx.actorUserId,
+        action: "school.details_updated",
+        entityType: "school",
+        entityId: ctx.tenantId,
+        before,
+        after: updated,
+      },
+      tx,
+    );
+    return updated;
+  });
 }

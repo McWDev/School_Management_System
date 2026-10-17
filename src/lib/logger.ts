@@ -1,5 +1,3 @@
-import "server-only";
-
 /*
  * Minimal structured server logger (03-Architecture.md §6). Writes one JSON
  * line per event. Never pass passwords, tokens, connection strings or student
@@ -7,11 +5,29 @@ import "server-only";
  */
 type Level = "info" | "warn" | "error";
 
-function serializeError(error: unknown) {
-  if (error instanceof Error) {
-    return { name: error.name, message: error.message, stack: error.stack };
-  }
-  return { message: String(error) };
+/**
+ * Remove query parameters from database error text. Drizzle's query errors
+ * embed "params: ..." (emails, names, password hashes); they must never reach logs.
+ */
+export function scrubErrorMessage(message: string): string {
+  return message
+    .replace(/\nparams:[\s\S]*$/, "\nparams: [redacted]")
+    .replace(/postgres(ql)?:\/\/[^\s"']+/gi, "postgresql://[redacted]");
+}
+
+/** Safe summary of an error, including the underlying cause (e.g. the Postgres error code). */
+export function serializeError(error: unknown, depth = 0): Record<string, unknown> {
+  if (!(error instanceof Error)) return { message: scrubErrorMessage(String(error)) };
+  const pg = error as Error & { code?: unknown; constraint?: unknown };
+  const out: Record<string, unknown> = {
+    name: error.name,
+    message: scrubErrorMessage(error.message),
+    ...(typeof pg.code === "string" ? { code: pg.code } : {}),
+    ...(typeof pg.constraint === "string" ? { constraint: pg.constraint } : {}),
+    stack: error.stack ? scrubErrorMessage(error.stack) : undefined,
+  };
+  if (error.cause && depth < 3) out.cause = serializeError(error.cause, depth + 1);
+  return out;
 }
 
 function write(level: Level, event: string, context: Record<string, unknown> = {}) {

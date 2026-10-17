@@ -23,3 +23,9 @@ export async function expectOnDashboard(page: Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dashboard");
 }
+
+/** Sign in and wait until the app has landed on the dashboard. */
+export async function signInAs(page: Page, email: string) {
+  await signIn(page, email);
+  await expectOnDashboard(page);
+}

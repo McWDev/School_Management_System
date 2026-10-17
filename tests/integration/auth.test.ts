@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { hasDatabase, uniqueSuffix } from "./helpers";
+import { deleteTestData, hasDatabase, uniqueSuffix } from "./helpers";
 import { eq, inArray, like, sql } from "drizzle-orm";
 import { getDb, getPool } from "@/db";
-import { authRateLimits, passwordResetTokens, sessions, tenants, users } from "@/db/schema";
+import { authRateLimits, passwordResetTokens, sessions, users } from "@/db/schema";
 import { changeSchoolStatus, registerSchool } from "@/features/tenants/repository";
 import { getAuthConfig } from "@/lib/auth/config";
 import { hitRateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
@@ -22,7 +22,7 @@ describe.skipIf(!hasDatabase)("authentication", () => {
   const ip = `test-${run}`;
   const meta = { ip, userAgent: "vitest" };
   const password = "integration-pass 123";
-  const platform = createPlatformContext();
+  const platform = createPlatformContext({ permissions: "all" });
   const tenantIds: string[] = [];
   const userIds: string[] = [];
   const emailOf = (name: string) => `${name}.${run}@auth-test.example`;
@@ -70,8 +70,7 @@ describe.skipIf(!hasDatabase)("authentication", () => {
     );
     await db.delete(authRateLimits).where(inArray(authRateLimits.key, emailKeys));
     await db.delete(authRateLimits).where(like(authRateLimits.key, `%${ip}%`));
-    if (userIds.length) await db.delete(users).where(inArray(users.id, userIds));
-    if (tenantIds.length) await db.delete(tenants).where(inArray(tenants.id, tenantIds));
+    await deleteTestData(tenantIds, userIds);
     await getPool().end();
   });
 

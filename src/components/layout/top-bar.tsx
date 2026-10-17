@@ -13,10 +13,12 @@ const menuContentClasses = "z-50 min-w-56 rounded-md border bg-surface p-1 text-
 export function TopBar({
   permissions,
   account,
+  contextLabel,
 }: {
   permissions?: readonly string[];
   /** Account menu, rendered by the server after the session is read. */
   account?: React.ReactNode;
+  contextLabel?: string;
 }) {
   const pathname = usePathname();
   const current = findActiveNavItem(pathname);
@@ -24,9 +26,12 @@ export function TopBar({
   return (
     <header className="no-print sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-surface/95 px-3 backdrop-blur sm:px-4">
       <MobileNav permissions={permissions} />
-      <p className="truncate text-sm font-medium text-muted-foreground" aria-live="polite">
-        {current?.title ?? "School Management System"}
-      </p>
+      <div className="flex min-w-0 flex-col leading-tight">
+        <p className="truncate text-sm font-medium" aria-live="polite">
+          {current?.title ?? "School Management System"}
+        </p>
+        {contextLabel && <p className="truncate text-xs text-muted-foreground">{contextLabel}</p>}
+      </div>
 
       <div className="ml-auto flex items-center gap-1">
         <ThemeToggle />

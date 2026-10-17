@@ -9,6 +9,7 @@
  */
 import { eq } from "drizzle-orm";
 import { getDb, getPool } from "@/db";
+import { serializeError } from "@/lib/logger";
 import { users } from "@/db/schema";
 import { createPasswordResetToken } from "@/lib/auth/service";
 
@@ -42,7 +43,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error("Failed:", error instanceof Error ? error.message : error);
+    console.error("Failed:", JSON.stringify(serializeError(error), null, 2));
     process.exitCode = 1;
   })
   .finally(() => getPool().end());

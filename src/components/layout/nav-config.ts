@@ -5,7 +5,6 @@ import {
   CalendarClock,
   CalendarRange,
   ChartColumn,
-  ClipboardCheck,
   ClipboardList,
   GraduationCap,
   Landmark,
@@ -19,6 +18,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import type { Permission } from "@/lib/permissions/catalog";
 
 export type NavItem = {
   title: string;
@@ -27,10 +27,11 @@ export type NavItem = {
   /** Short description shown on the module page header. */
   description: string;
   /**
-   * Permission key required to see this item (07-Authentication-Roles-Security.md).
-   * Hiding a menu item is not authorization: pages and actions check on the server.
+   * Permission(s) required to see this item — any one of a list is enough;
+   * null means every signed-in user. Hiding a menu item is not authorization:
+   * pages and actions check on the server.
    */
-  permission: string;
+  permission: Permission | readonly Permission[] | null;
 };
 
 export type NavGroup = {
@@ -48,7 +49,7 @@ export const navGroups: NavGroup[] = [
         href: "/dashboard",
         icon: LayoutDashboard,
         description: "Overview of your school.",
-        permission: "dashboard.read",
+        permission: null,
       },
     ],
   },
@@ -155,13 +156,6 @@ export const navGroups: NavGroup[] = [
         permission: "branches.read",
       },
       {
-        title: "School Registrations",
-        href: "/settings/school-registrations",
-        icon: ClipboardCheck,
-        description: "School registration details and status.",
-        permission: "schools.read",
-      },
-      {
         title: "Users",
         href: "/settings/users",
         icon: UserCog,
@@ -179,8 +173,8 @@ export const navGroups: NavGroup[] = [
         title: "School Profile",
         href: "/settings/school-profile",
         icon: Landmark,
-        description: "School name, logo and contact details.",
-        permission: "settings.manage",
+        description: "School registration, name, logo and contact details.",
+        permission: ["settings.manage", "schools.read"],
       },
       {
         title: "General Settings",
@@ -195,12 +189,19 @@ export const navGroups: NavGroup[] = [
 
 export const allNavItems: NavItem[] = navGroups.flatMap((group) => group.items);
 
+export function isNavItemVisible(item: NavItem, permissions: ReadonlySet<string>): boolean {
+  if (item.permission === null) return true;
+  const required: readonly Permission[] =
+    typeof item.permission === "string" ? [item.permission] : item.permission;
+  return required.some((key) => permissions.has(key));
+}
+
 /** Keep only items the user may see; drop groups left empty. */
 export function filterNavGroups(groups: NavGroup[], permissions: ReadonlySet<string>): NavGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => permissions.has(item.permission)),
+      items: group.items.filter((item) => isNavItemVisible(item, permissions)),
     }))
     .filter((group) => group.items.length > 0);
 }

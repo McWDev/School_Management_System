@@ -27,8 +27,9 @@ export function getPool(): Pool {
     connectionString: withVerifiedSsl(getServerEnv().DATABASE_URL),
     max: 10,
     idleTimeoutMillis: 30_000,
-    // Neon computes scale to zero; the first connection after idle can take a moment.
-    connectionTimeoutMillis: 15_000,
+    // Neon computes scale to zero; the first connection after idle (cold start)
+    // can take several seconds, longer on slow networks.
+    connectionTimeoutMillis: 30_000,
   });
   return globalForDb.__smsPool;
 }

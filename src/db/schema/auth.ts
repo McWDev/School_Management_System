@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { timestamps } from "./_shared";
 import { tenants } from "./tenants";
 
@@ -20,12 +31,19 @@ export const users = pgTable(
     /** Argon2id PHC string. Never a plaintext or reversible value. */
     passwordHash: text("password_hash").notNull(),
     status: userStatus("status").notNull().default("active"),
+    /**
+     * Branch scope: true = every branch of the school; false = only the
+     * branches in user_branch_access. Ignored for platform users.
+     */
+    allBranches: boolean("all_branches").notNull().default(false),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
     index("users_tenant_idx").on(table.tenantId),
+    // Target for composite foreign keys so links never cross schools.
+    unique("users_tenant_id_id_unique").on(table.tenantId, table.id),
     check("users_email_lowercase", sql`${table.email} = lower(${table.email})`),
   ],
 );

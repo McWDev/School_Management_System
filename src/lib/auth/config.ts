@@ -73,6 +73,8 @@ export const RATE_LIMITS = {
 } as const;
 
 export const PASSWORD_RESET_TTL_MS = 30 * 60_000;
+/** New accounts get a longer-lived link to set their first password. */
+export const ACCOUNT_SETUP_TTL_MS = 24 * 3_600_000;
 /** Don't write last_used_at on every request; idle timeout tolerance. */
 export const SESSION_TOUCH_INTERVAL_MS = 5 * 60_000;
 

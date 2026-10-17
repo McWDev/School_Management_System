@@ -15,13 +15,17 @@ const BRANCH_B = "33333333-3333-4333-8333-333333333333";
 
 describe("tenant context", () => {
   it("gives an all-branches actor access to any branch", () => {
-    const ctx = createTenantContext({ tenantId: TENANT, branchScope: "all" });
+    const ctx = createTenantContext({ tenantId: TENANT, branchScope: "all", permissions: "all" });
     expect(canAccessBranch(ctx, BRANCH_A)).toBe(true);
     expect(() => assertAllBranches(ctx)).not.toThrow();
   });
 
   it("limits a branch-scoped actor to their branches", () => {
-    const ctx = createTenantContext({ tenantId: TENANT, branchScope: [BRANCH_A] });
+    const ctx = createTenantContext({
+      tenantId: TENANT,
+      branchScope: [BRANCH_A],
+      permissions: "all",
+    });
     expect(canAccessBranch(ctx, BRANCH_A)).toBe(true);
     expect(canAccessBranch(ctx, BRANCH_B)).toBe(false);
     expect(() => assertBranchInScope(ctx, BRANCH_B)).toThrow(NotFoundError);
@@ -29,12 +33,16 @@ describe("tenant context", () => {
   });
 
   it("rejects malformed ids so they never reach a query", () => {
-    expect(() => createTenantContext({ tenantId: "1 OR 1=1", branchScope: "all" })).toThrow();
-    expect(() => createTenantContext({ tenantId: TENANT, branchScope: ["nope"] })).toThrow();
+    expect(() =>
+      createTenantContext({ tenantId: "1 OR 1=1", branchScope: "all", permissions: "all" }),
+    ).toThrow();
+    expect(() =>
+      createTenantContext({ tenantId: TENANT, branchScope: ["nope"], permissions: "all" }),
+    ).toThrow();
   });
 
   it("is immutable", () => {
-    const ctx = createTenantContext({ tenantId: TENANT, branchScope: "all" });
+    const ctx = createTenantContext({ tenantId: TENANT, branchScope: "all", permissions: "all" });
     expect(Object.isFrozen(ctx)).toBe(true);
     expect(() => {
       (ctx as { tenantId: string }).tenantId = BRANCH_A;
@@ -42,7 +50,9 @@ describe("tenant context", () => {
   });
 
   it("keeps platform and tenant contexts distinct", () => {
-    expect(createPlatformContext().kind).toBe("platform");
-    expect(createTenantContext({ tenantId: TENANT, branchScope: "all" }).kind).toBe("tenant");
+    expect(createPlatformContext({ permissions: "all" }).kind).toBe("platform");
+    expect(
+      createTenantContext({ tenantId: TENANT, branchScope: "all", permissions: "all" }).kind,
+    ).toBe("tenant");
   });
 });

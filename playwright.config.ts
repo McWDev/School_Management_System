@@ -40,7 +40,9 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run build && npm run start",
-    url: baseURL,
+    // Health returns 200 only once the database answers: this also wakes a
+    // suspended Neon compute before the first test signs in.
+    url: `${baseURL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     // Many test logins come from one local IP; don't trip the per-IP limit.

@@ -124,6 +124,19 @@ No third-party auth provider. Code: `src/lib/auth/` (service, session, password,
 
 | Email | Account |
 |---|---|
-| `platform.admin@sms.example` | Platform-level user |
-| `admin@demo-hodan.example` | School admin, Hodan Demo School (active) |
-| `admin@demo-warta.example` | School admin, Warta Demo Academy (pending, so login is refused) |
+| `platform.admin@sms.example` | Platform Super Admin |
+| `admin@demo-hodan.example` | School Admin, Hodan Demo School (active) |
+| `north.admin@demo-hodan.example` | Branch Admin, Hodan — North Campus only |
+| `teacher@demo-hodan.example` | Teacher, Hodan — Main Campus only |
+| `finance@demo-hodan.example` | Finance Officer, Hodan — all branches |
+| `admin@demo-warta.example` | School Admin, Warta Demo Academy (pending, so login is refused) |
+
+## Roles, permissions and audit log
+- **Permission catalog:** `src/lib/permissions/catalog.ts` (keys from `07-Authentication-Roles-Security.md`, plus `platform_audit.read`). Migrations seed the `permissions` table from it, and a test keeps the two in sync.
+- **Role presets:** `src/lib/permissions/presets.ts`. Every school gets School Admin (locked), Branch Admin, Teacher, Finance Officer, Registrar and Auditor when it is registered, and can add custom roles (school permissions only). The platform role, Platform Super Admin, has no access to school records.
+- **Branch scope** is set per user: *all branches* or an explicit list (`user_branch_access`). Composite foreign keys stop it from pointing at another school's branch.
+- **Enforcement:** `src/lib/authz` builds the `TenantContext` / `PlatformContext` (school, branch scope, permissions) from the session. Server actions use `tenantAction()` / `platformAction()`, and every repository function re-checks its permission and scope. Hiding navigation items is convenience only.
+- **Guards:** admins cannot remove their own user-management access or disable themselves, and locked roles cannot be edited.
+- **Audit log:** `src/lib/audit` writes `audit_logs` rows in the same transaction as the change (school registration and status, school profile, branches, users, roles, reset links) with secrets redacted. Server logs also scrub database query parameters.
+- **New users** receive a one-time setup link (valid 24 h) instead of a password, because email delivery is not configured.
+- **Navigation:** School Registrations is part of **School Profile** (`02-Product-Decisions.md`). Platform users see all registrations there; school users see their own registration and profile.

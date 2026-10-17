@@ -280,10 +280,11 @@ export async function revokeAllUserSessions(userId: string, reason: string): Pro
  */
 export async function createPasswordResetToken(
   userId: string,
+  ttlMs: number = PASSWORD_RESET_TTL_MS,
 ): Promise<{ token: string; expiresAt: Date }> {
   const { sessionSecret } = getAuthConfig();
   const token = generateToken();
-  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+  const expiresAt = new Date(Date.now() + ttlMs);
   await getDb().transaction(async (tx) => {
     await tx
       .update(passwordResetTokens)
