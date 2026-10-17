@@ -67,3 +67,28 @@ npm run dev                       # http://localhost:3000
 - `tests/unit` — Vitest unit tests
 - `tests/integration` — Vitest integration tests (database/business rules)
 - `tests/e2e` — Playwright journeys
+
+## Database (Neon + Drizzle)
+- **Neon project:** `Schools` (`autumn-bonus-18915899`). Branches: `production` (default, kept clean) and `development` (local work and tests). Neither expires; other branches created from `neon.ts` auto-expire after 7 days.
+- **Driver:** `pg` (node-postgres) pool over the pooled `DATABASE_URL` (see `src/db/index.ts`). Migrations use the direct `DATABASE_URL_UNPOOLED`. SSL is upgraded to `sslmode=verify-full`.
+- **Schema:** `src/db/schema/`. **Migrations:** `src/db/migrations/` (committed, reviewed). There is intentionally no `db:push`.
+
+### First-time setup
+```bash
+npx neon@latest login                  # browser sign-in
+npx neon@latest checkout development   # pins the branch, writes .env.local
+npm run db:migrate                     # apply migrations to development
+```
+
+### Migration workflow
+| Command | Purpose |
+|---|---|
+| `npm run db:generate` | Generate SQL from schema changes — **review the SQL before applying** |
+| `npm run db:migrate` | Apply pending migrations to the branch in `.env.local` |
+| `npm run db:check` | Check migration files are consistent |
+| `npm run db:studio` | Browse the database (development only) |
+
+Production migrations follow `09-Deployment-and-Operations.md` §4: review, test on a branch, back up, then apply.
+
+### Health check
+`GET /api/health` returns `200 {"status":"ok"}` or `503 {"status":"degraded"}`. It never exposes connection details.
