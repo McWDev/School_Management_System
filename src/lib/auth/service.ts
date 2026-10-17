@@ -26,7 +26,8 @@ import { generateToken, hashIdentifier, hashToken } from "./tokens";
 /** What the rest of the app knows about the signed-in user. Keep it narrow. */
 export type SessionUser = {
   id: string;
-  email: string;
+  email: string | null;
+  username: string | null;
   fullName: string;
   /** null for platform-level users. */
   tenantId: string | null;
@@ -43,7 +44,8 @@ export type LoginResult =
   { ok: true; token: string; expiresAt: Date; user: SessionUser } | LoginFailure;
 
 const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().max(254),
+  /** Email address, or the username a school gave a staff member. */
+  identifier: z.string().trim().toLowerCase().min(1).max(254),
   password: z.string().min(1).max(1024),
 });
 
@@ -54,8 +56,9 @@ export const emailSchema = z
   .max(254)
   .pipe(z.email("Enter a valid email address."));
 
-function emailKey(email: string) {
-  return `login:email:${hashIdentifier(email, getAuthConfig().sessionSecret)}`;
+/** Rate-limit key for an account (email or username), never stored raw. */
+function emailKey(identifier: string) {
+  return `login:email:${hashIdentifier(identifier, getAuthConfig().sessionSecret)}`;
 }
 
 // ------------------------------------------------------------------ users
@@ -112,12 +115,17 @@ export async function setUserStatus(userId: string, status: User["status"]): Pro
 // ---------------------------------------------------------------- sessions
 
 export async function login(
-  input: { email: string; password: string },
+  input: { identifier: string; password: string },
   meta: { ip: string; userAgent?: string | null },
 ): Promise<LoginResult> {
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) return { ok: false, reason: "invalid_credentials" };
-  const { email, password } = parsed.data;
+  const { identifier, password } = parsed.data;
+  const email = identifier;
+  // Emails contain "@"; usernames never do.
+  const byIdentifier = identifier.includes("@")
+    ? eq(users.email, identifier)
+    : eq(users.username, identifier);
 
   // Independent reads run in parallel (each is a network round trip). The
   // rate limits are still checked before the password is verified.
@@ -131,7 +139,7 @@ export async function login(
       .select({ user: users, tenantStatus: tenants.status })
       .from(users)
       .leftJoin(tenants, eq(users.tenantId, tenants.id))
-      .where(eq(users.email, email)),
+      .where(byIdentifier),
   ]);
   if (ipState.limited) {
     logger.warn("auth.login_rate_limited", { scope: "ip" });
@@ -176,6 +184,7 @@ export async function login(
     user: {
       id: row.user.id,
       email: row.user.email,
+      username: row.user.username,
       fullName: row.user.fullName,
       tenantId: row.user.tenantId,
       sessionId: created.sessionId,
@@ -215,6 +224,7 @@ export async function validateSessionToken(token: string): Promise<SessionUser |
       lastUsedAt: sessions.lastUsedAt,
       id: users.id,
       email: users.email,
+      username: users.username,
       fullName: users.fullName,
       tenantId: users.tenantId,
     })
@@ -242,6 +252,7 @@ export async function validateSessionToken(token: string): Promise<SessionUser |
   return {
     id: row.id,
     email: row.email,
+    username: row.username,
     fullName: row.fullName,
     tenantId: row.tenantId,
     sessionId: row.sessionId,

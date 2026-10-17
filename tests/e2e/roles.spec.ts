@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import pg from "pg";
 import { signInAs } from "./helpers";
 
 /*
@@ -7,6 +8,20 @@ import { signInAs } from "./helpers";
  * pages are opened by URL to prove the server still enforces access.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
+
+// Test-only cleanup of branches created by these tests (the app archives, never deletes).
+test.afterAll(async () => {
+  if (!process.env.DATABASE_URL) return;
+  const url = new URL(process.env.DATABASE_URL);
+  url.searchParams.set("sslmode", "verify-full");
+  const client = new pg.Client({ connectionString: url.toString() });
+  await client.connect();
+  try {
+    await client.query("delete from branches where name like $1", ["E2E Campus E2E%"]);
+  } finally {
+    await client.end();
+  }
+});
 
 const SCHOOL_PAGES = [
   "/staff",
@@ -58,6 +73,10 @@ test("school admin can create and archive a branch", async ({ page }) => {
   await dialog.getByLabel("Code").fill(code);
   await dialog.getByLabel("Name").fill(`E2E Campus ${code}`);
   await dialog.getByRole("button", { name: "Create branch" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Search for it so the test does not depend on how many branches exist.
+  await page.getByRole("searchbox", { name: "Search by name or code" }).fill(code);
+  await page.getByRole("button", { name: "Apply" }).click();
   const row = page.getByRole("row", { name: new RegExp(code) });
   await expect(row).toBeVisible();
 

@@ -42,7 +42,7 @@ describe.skipIf(!hasDatabase)("authentication", () => {
   }
 
   async function loginOk(email: string, pw = password) {
-    const result = await auth.login({ email, password: pw }, meta);
+    const result = await auth.login({ identifier: email, password: pw }, meta);
     if (!result.ok) throw new Error(`expected login to succeed, got ${result.reason}`);
     return result;
   }
@@ -127,10 +127,10 @@ describe.skipIf(!hasDatabase)("authentication", () => {
 
     it("gives the same generic failure for a wrong password and an unknown email", async () => {
       const wrongPassword = await auth.login(
-        { email: emailOf("alice"), password: "not the password" },
+        { identifier: emailOf("alice"), password: "not the password" },
         meta,
       );
-      const unknownEmail = await auth.login({ email: emailOf("nobody"), password }, meta);
+      const unknownEmail = await auth.login({ identifier: emailOf("nobody"), password }, meta);
       expect(wrongPassword).toEqual({ ok: false, reason: "invalid_credentials" });
       expect(unknownEmail).toEqual({ ok: false, reason: "invalid_credentials" });
     });
@@ -170,7 +170,7 @@ describe.skipIf(!hasDatabase)("authentication", () => {
       await auth.setUserStatus(carol.id, "disabled");
 
       expect(await auth.validateSessionToken(session.token)).toBeNull();
-      expect(await auth.login({ email: emailOf("carol"), password }, meta)).toEqual({
+      expect(await auth.login({ identifier: emailOf("carol"), password }, meta)).toEqual({
         ok: false,
         reason: "account_disabled",
       });
@@ -203,13 +203,13 @@ describe.skipIf(!hasDatabase)("authentication", () => {
   describe("school status", () => {
     it("refuses sign-in for a pending school, only after a correct password", async () => {
       await makeUser("pat", pendingSchoolId);
-      expect(await auth.login({ email: emailOf("pat"), password: "wrong password" }, meta)).toEqual(
-        {
-          ok: false,
-          reason: "invalid_credentials",
-        },
-      );
-      expect(await auth.login({ email: emailOf("pat"), password }, meta)).toEqual({
+      expect(
+        await auth.login({ identifier: emailOf("pat"), password: "wrong password" }, meta),
+      ).toEqual({
+        ok: false,
+        reason: "invalid_credentials",
+      });
+      expect(await auth.login({ identifier: emailOf("pat"), password }, meta)).toEqual({
         ok: false,
         reason: "school_inactive",
         schoolStatus: "pending",
@@ -232,10 +232,13 @@ describe.skipIf(!hasDatabase)("authentication", () => {
     it("locks an account after 5 failed attempts, even with the right password", async () => {
       await makeUser("rate", activeSchoolId);
       for (let i = 0; i < 5; i++) {
-        const failed = await auth.login({ email: emailOf("rate"), password: "wrong one!!" }, meta);
+        const failed = await auth.login(
+          { identifier: emailOf("rate"), password: "wrong one!!" },
+          meta,
+        );
         expect(failed).toMatchObject({ reason: "invalid_credentials" });
       }
-      const blocked = await auth.login({ email: emailOf("rate"), password }, meta);
+      const blocked = await auth.login({ identifier: emailOf("rate"), password }, meta);
       expect(blocked).toMatchObject({ ok: false, reason: "rate_limited" });
       expect((blocked as { retryAfterSeconds: number }).retryAfterSeconds).toBeGreaterThan(0);
     });
@@ -269,7 +272,7 @@ describe.skipIf(!hasDatabase)("authentication", () => {
         ok: true,
       });
       expect(await auth.validateSessionToken(session.token)).toBeNull();
-      expect(await auth.login({ email: emailOf("erin"), password }, meta)).toMatchObject({
+      expect(await auth.login({ identifier: emailOf("erin"), password }, meta)).toMatchObject({
         reason: "invalid_credentials",
       });
       await loginOk(emailOf("erin"), newPassword);

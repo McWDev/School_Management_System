@@ -78,7 +78,7 @@ describe("passwords", () => {
 describe("login messages and redirects", () => {
   it("uses one generic message for wrong email or password", () => {
     expect(loginFailureMessage({ ok: false, reason: "invalid_credentials" })).toBe(
-      "Incorrect email or password.",
+      "Incorrect email, username or password.",
     );
   });
 

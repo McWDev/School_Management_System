@@ -27,14 +27,15 @@ export type FormState = {
 };
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const email = String(formData.get("email") ?? "");
+  // Email address or username (staff given login access by their school).
+  const email = String(formData.get("identifier") ?? "");
   const password = String(formData.get("password") ?? "");
   if (!email.trim() || !password) {
     return {
       email,
-      error: "Enter your email and password.",
+      error: "Enter your email or username and your password.",
       fieldErrors: {
-        ...(email.trim() ? {} : { email: ["Enter your email."] }),
+        ...(email.trim() ? {} : { identifier: ["Enter your email or username."] }),
         ...(password ? {} : { password: ["Enter your password."] }),
       },
     };
@@ -43,7 +44,7 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   let result;
   try {
     result = await login(
-      { email, password },
+      { identifier: email, password },
       { ip: await getClientIp(), userAgent: await getUserAgent() },
     );
   } catch (error) {

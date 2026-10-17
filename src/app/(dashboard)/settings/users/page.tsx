@@ -107,7 +107,9 @@ export default async function UsersPage({ searchParams }: PageProps<"/settings/u
                         {user.fullName}
                         {isSelf && <span className="text-muted-foreground"> (you)</span>}
                       </span>
-                      <span className="block text-xs text-muted-foreground">{user.email}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {user.email ?? "No email (signs in with a username)"}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -139,7 +141,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/settings/u
                             branches={branchOptions}
                             initial={{
                               fullName: user.fullName,
-                              email: user.email,
+                              email: user.email ?? "",
                               roleIds: user.roles.map((r) => r.id),
                               allBranches: user.allBranches,
                               branchIds: user.branches.map((b) => b.id),

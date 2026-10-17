@@ -18,15 +18,19 @@ export const userStatus = pgEnum("user_status", ["active", "disabled"]);
 
 /**
  * People who sign in. tenant_id is null only for platform-level users
- * (Platform Super Admin). Email is unique across the platform and stored
- * lower-case (02-Product-Decisions.md).
+ * (Platform Super Admin). Users sign in with their email or, for staff given
+ * login access by the school, a username. Both are unique across the platform
+ * and stored lower-case (02-Product-Decisions.md).
  */
 export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "restrict" }),
-    email: text("email").notNull().unique("users_email_unique"),
+    /** Optional for staff who sign in with a username only. */
+    email: text("email").unique("users_email_unique"),
+    /** Login name set by the school (e.g. for staff without email), lower-case. */
+    username: text("username").unique("users_username_unique"),
     fullName: text("full_name").notNull(),
     /** Argon2id PHC string. Never a plaintext or reversible value. */
     passwordHash: text("password_hash").notNull(),
@@ -45,6 +49,12 @@ export const users = pgTable(
     // Target for composite foreign keys so links never cross schools.
     unique("users_tenant_id_id_unique").on(table.tenantId, table.id),
     check("users_email_lowercase", sql`${table.email} = lower(${table.email})`),
+    check("users_username_format", sql.raw(`username ~ '^[a-z0-9][a-z0-9._-]{2,39}$'`)),
+    // Everyone needs something to sign in with.
+    check(
+      "users_login_identifier",
+      sql`${table.email} is not null or ${table.username} is not null`,
+    ),
   ],
 );
 

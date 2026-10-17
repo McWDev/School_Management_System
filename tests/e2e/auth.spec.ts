@@ -9,7 +9,7 @@ test.describe("authentication", () => {
     await page.goto("/students");
     await expect(page).toHaveURL(/\/login\?next=%2Fstudents$/);
 
-    await page.getByLabel("Email").fill(DEMO.schoolAdmin.email);
+    await page.getByLabel("Email or username").fill(DEMO.schoolAdmin.email);
     await page.getByLabel("Password").fill(process.env.SEED_USER_PASSWORD!);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/students$/);
@@ -18,10 +18,10 @@ test.describe("authentication", () => {
 
   test("shows a generic error for wrong credentials", async ({ page }) => {
     await signIn(page, `nobody.${Date.now()}@example.com`, "definitely wrong pw");
-    await expect(page.getByText("Incorrect email or password.")).toBeVisible();
+    await expect(page.getByText("Incorrect email, username or password.")).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
     // The email is kept so the user can correct the password.
-    await expect(page.getByLabel("Email")).not.toHaveValue("");
+    await expect(page.getByLabel("Email or username")).not.toHaveValue("");
   });
 
   test("explains why a pending school cannot sign in", async ({ page }) => {

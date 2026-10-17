@@ -64,6 +64,13 @@
       "when": 1792254447806,
       "tag": "0008_seed_staff_permissions_work_types",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792255948253,
+      "tag": "0009_staff_login_inactive",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@ import { IMAGE_MAX_BYTES } from "@/lib/images";
 import {
   createStaff,
   createWorkType,
+  deleteStaff,
   deleteWorkType,
   renameWorkType,
   updateStaff,
@@ -30,6 +31,11 @@ function staffInput(formData: FormData) {
   };
 }
 
+/** Optional login access (username + password) from the staff form. */
+function loginInput(formData: FormData) {
+  return { username: field(formData, "username"), password: field(formData, "password") };
+}
+
 /** The uploaded photo, or null when none was chosen. Size is checked before reading. */
 async function photoFrom(formData: FormData): Promise<Uint8Array | null> {
   const file = formData.get("photo");
@@ -47,7 +53,7 @@ export async function createStaffAction(
   formData: FormData,
 ): Promise<FormResult<unknown>> {
   const result = await tenantAction("staff.manage", async (ctx) => {
-    await createStaff(ctx, staffInput(formData), await photoFrom(formData));
+    await createStaff(ctx, staffInput(formData), await photoFrom(formData), loginInput(formData));
   });
   if (result.ok) revalidatePath(PATH);
   return toFormResult(result, "Staff member added.");
@@ -62,6 +68,7 @@ export async function updateStaffAction(
     await updateStaff(ctx, staffId, staffInput(formData), {
       photo: await photoFrom(formData),
       removePhoto: formData.get("removePhoto") === "on",
+      login: loginInput(formData),
     });
   });
   if (result.ok) revalidatePath(PATH);
@@ -93,6 +100,12 @@ export async function renameWorkTypeAction(
 
 export async function deleteWorkTypeAction(workTypeId: string): Promise<FormResult<unknown>> {
   const result = await tenantAction("staff.manage", (ctx) => deleteWorkType(ctx, workTypeId));
+  if (result.ok) revalidatePath(PATH);
+  return toFormResult(result);
+}
+
+export async function deleteStaffAction(staffId: string): Promise<FormResult<unknown>> {
+  const result = await tenantAction("staff.manage", (ctx) => deleteStaff(ctx, staffId));
   if (result.ok) revalidatePath(PATH);
   return toFormResult(result);
 }

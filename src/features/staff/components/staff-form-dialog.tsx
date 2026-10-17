@@ -8,7 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { IDLE, type FormResult } from "@/lib/form-result";
-import { ageFrom } from "../schemas";
+import { ageFrom, MIN_STAFF_AGE } from "../schemas";
+
+/** Today in the user’s own time zone (YYYY-MM-DD): the latest allowed hire date. */
+function localToday() {
+  return new Date().toLocaleDateString("en-CA");
+}
+
+/** Latest allowed date of birth (staff must be at least MIN_STAFF_AGE). */
+function latestBirthDate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - MIN_STAFF_AGE);
+  return d.toISOString().slice(0, 10);
+}
 
 export type StaffValues = {
   fullName: string;
@@ -20,7 +32,9 @@ export type StaffValues = {
   address: string | null;
   location: string | null;
   hireDate: string | null;
-  status: "active" | "left";
+  status: "active" | "inactive" | "left";
+  /** Login username, when the staff member already has login access. */
+  username: string | null;
 };
 
 type Props = {
@@ -54,7 +68,7 @@ export function StaffFormDialog(props: Props) {
       </DialogTrigger>
       <DialogContent
         title={mode === "create" ? "Add staff member" : `Edit ${initial?.fullName}`}
-        description="Full name and work type are required; everything else is optional."
+        description="Fields marked * are required. Photo, email, address and login are optional."
         className="max-w-2xl"
       >
         <StaffForm key={formKey} {...props} onSaved={() => setOpen(false)} />
@@ -165,16 +179,18 @@ function StaffForm({
             </Select>
           )}
         </FormField>
-        <FormField id={`${id}-phone`} label="Phone" error={errors.phone?.[0]}>
+        <FormField id={`${id}-phone`} label="Phone" required error={errors.phone?.[0]}>
           {(p) => <Input {...p} name="phone" type="tel" defaultValue={initial?.phone ?? ""} />}
         </FormField>
         <FormField id={`${id}-email`} label="Email" error={errors.email?.[0]}>
           {(p) => <Input {...p} name="email" type="email" defaultValue={initial?.email ?? ""} />}
         </FormField>
-        <FormField id={`${id}-gender`} label="Gender" error={errors.gender?.[0]}>
+        <FormField id={`${id}-gender`} label="Gender" required error={errors.gender?.[0]}>
           {(p) => (
             <Select {...p} name="gender" defaultValue={initial?.gender ?? ""}>
-              <option value="">Not specified</option>
+              <option value="" disabled>
+                Choose a gender
+              </option>
               <option value="male">Male</option>
               <option value="female">Female</option>
             </Select>
@@ -183,7 +199,12 @@ function StaffForm({
         <FormField
           id={`${id}-dob`}
           label="Date of birth"
-          helperText={age !== null ? `Age: ${age}` : "Age is calculated from the date of birth."}
+          required
+          helperText={
+            age !== null
+              ? `Age: ${age}`
+              : `Age is calculated from the date of birth (at least ${MIN_STAFF_AGE}).`
+          }
           error={errors.dateOfBirth?.[0]}
         >
           {(p) => (
@@ -191,6 +212,7 @@ function StaffForm({
               {...p}
               name="dateOfBirth"
               type="date"
+              max={latestBirthDate()}
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
             />
@@ -199,14 +221,21 @@ function StaffForm({
         <FormField
           id={`${id}-location`}
           label="Location"
+          required
           helperText="Area, district or city."
           error={errors.location?.[0]}
         >
           {(p) => <Input {...p} name="location" defaultValue={initial?.location ?? ""} />}
         </FormField>
-        <FormField id={`${id}-hire`} label="Hire date" error={errors.hireDate?.[0]}>
+        <FormField id={`${id}-hire`} label="Hire date" required error={errors.hireDate?.[0]}>
           {(p) => (
-            <Input {...p} name="hireDate" type="date" defaultValue={initial?.hireDate ?? ""} />
+            <Input
+              {...p}
+              name="hireDate"
+              type="date"
+              max={localToday()}
+              defaultValue={initial?.hireDate ?? ""}
+            />
           )}
         </FormField>
       </div>
@@ -217,7 +246,7 @@ function StaffForm({
         <FormField
           id={`${id}-status`}
           label="Status"
-          helperText="Staff who leave are kept on record as “Left”."
+          helperText="Only Active staff can log in. Inactive or Left blocks login and signs them out immediately."
           error={errors.status?.[0]}
         >
           {(p) => (
@@ -228,11 +257,48 @@ function StaffForm({
               className="sm:max-w-xs"
             >
               <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
               <option value="left">Left</option>
             </Select>
           )}
         </FormField>
       )}
+
+      <fieldset className="flex flex-col gap-3 rounded-md border p-3">
+        <legend className="px-1 text-sm font-medium">Login access (optional)</legend>
+        <p className="text-xs text-muted-foreground">
+          {initial?.username
+            ? "This staff member can log in with this username. Leave the password empty to keep it."
+            : "Give a username and password so this staff member can log in. Leave both empty for no login."}
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            id={`${id}-username`}
+            label="Username"
+            helperText="Letters, digits, dots or hyphens, e.g. ahmed.ali"
+            error={errors.username?.[0]}
+          >
+            {(p) => (
+              <Input
+                {...p}
+                name="username"
+                defaultValue={initial?.username ?? ""}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            )}
+          </FormField>
+          <FormField
+            id={`${id}-password`}
+            label={initial?.username ? "New password" : "Password"}
+            helperText="At least 10 characters."
+            error={errors.password?.[0]}
+          >
+            {(p) => <Input {...p} name="password" type="password" autoComplete="new-password" />}
+          </FormField>
+        </div>
+      </fieldset>
       <div className="flex justify-end gap-2">
         <DialogClose asChild>
           <Button type="button" variant="outline">

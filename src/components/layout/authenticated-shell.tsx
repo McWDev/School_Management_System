@@ -23,7 +23,12 @@ export async function AuthenticatedShell({ children }: { children: React.ReactNo
     <AppShell
       permissions={[...access.permissions]}
       contextLabel={school?.name ?? "Platform administration"}
-      account={<AccountMenu fullName={access.user.fullName} email={access.user.email} />}
+      account={
+        <AccountMenu
+          fullName={access.user.fullName}
+          email={access.user.email ?? access.user.username ?? ""}
+        />
+      }
     >
       {children}
     </AppShell>

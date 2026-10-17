@@ -9,7 +9,14 @@ import { logoutAction } from "@/features/auth/actions";
 const menuItemClasses =
   "flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-muted";
 
-export function AccountMenu({ fullName, email }: { fullName: string; email: string }) {
+export function AccountMenu({
+  fullName,
+  email,
+}: {
+  fullName: string;
+  /** Email, or the username for staff who sign in without one. */
+  email: string;
+}) {
   const [signingOut, startTransition] = useTransition();
 
   return (

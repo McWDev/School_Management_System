@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Search, UserRound, Users } from "lucide-react";
 import { Pagination } from "@/components/data-table/pagination";
+import { ConfirmAction } from "@/components/forms/confirm-action";
 import { NoAccess } from "@/components/layout/no-access";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import {
 import {
   createStaffAction,
   createWorkTypeAction,
+  deleteStaffAction,
   deleteWorkTypeAction,
   renameWorkTypeAction,
   updateStaffAction,
@@ -34,6 +36,9 @@ export const metadata: Metadata = { title: "School Staff" };
 
 // Loads permission-scoped data before rendering; navigations may block (loading.tsx shows a skeleton).
 export const instant = false;
+
+const STATUS_LABEL = { active: "Active", inactive: "Inactive", left: "Left" } as const;
+const STATUS_TONE = { active: "success", inactive: "warning", left: "neutral" } as const;
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -112,6 +117,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
         <Select name="status" defaultValue={status ?? ""} aria-label="Status" className="w-auto">
           <option value="">All statuses</option>
           <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
           <option value="left">Left</option>
         </Select>
         <Button type="submit" variant="outline">
@@ -180,6 +186,11 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                               {member.email}
                             </span>
                           )}
+                          {member.username && (
+                            <span className="block text-xs text-muted-foreground">
+                              Login: {member.username}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </TableCell>
@@ -204,19 +215,25 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                       {formatDate(member.hireDate)}
                     </TableCell>
                     <TableCell>
-                      <Badge tone={member.status === "active" ? "success" : "neutral"}>
-                        {member.status === "active" ? "Active" : "Left"}
-                      </Badge>
+                      <Badge tone={STATUS_TONE[member.status]}>{STATUS_LABEL[member.status]}</Badge>
                     </TableCell>
                     {canManage && (
                       <TableCell>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-2">
                           <StaffFormDialog
                             mode="edit"
                             workTypes={typeOptions}
                             initial={member}
                             photoSrc={photoSrc}
                             action={updateStaffAction.bind(null, member.id)}
+                          />
+                          <ConfirmAction
+                            label="Delete"
+                            title={`Delete ${member.fullName}?`}
+                            description={`This permanently deletes ${member.fullName}, their photo${member.username ? " and their login (they are signed out)" : ""}. This cannot be undone. To keep their record, set the status to Left instead.`}
+                            confirmLabel="Delete staff member"
+                            variant="destructive"
+                            action={deleteStaffAction.bind(null, member.id)}
                           />
                         </div>
                       </TableCell>

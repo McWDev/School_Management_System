@@ -49,10 +49,13 @@ export async function deleteTestData(tenantIds: string[], platformUserIds: strin
     ].filter((c) => c !== undefined);
     await db.delete(schema.auditLogs).where(or(...conditions));
   }
-  if (userIds.length) await db.delete(schema.users).where(inArray(schema.users.id, userIds));
   if (tenantIds.length) {
+    // Staff may point at login accounts, so they go before users.
     await db.delete(schema.staff).where(inArray(schema.staff.tenantId, tenantIds));
     await db.delete(schema.workTypes).where(inArray(schema.workTypes.tenantId, tenantIds));
+  }
+  if (userIds.length) await db.delete(schema.users).where(inArray(schema.users.id, userIds));
+  if (tenantIds.length) {
     await db.delete(schema.roles).where(inArray(schema.roles.tenantId, tenantIds));
     await db.delete(schema.branches).where(inArray(schema.branches.tenantId, tenantIds));
     await db.delete(schema.tenants).where(inArray(schema.tenants.id, tenantIds));

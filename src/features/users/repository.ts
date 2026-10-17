@@ -7,6 +7,7 @@ import {
   rolePermissions,
   roles,
   sessions,
+  staff,
   tenants,
   userBranchAccess,
   userRoles,
@@ -369,6 +370,16 @@ export async function setSchoolUserStatus(
   const user = await findSchoolUser(ctx, userId);
   if (user.id === ctx.actorUserId)
     throw new InvalidStateError("You cannot disable your own account.");
+  // A staff member's login follows their staff status (Active / Inactive / Left).
+  const [linked] = await getDb()
+    .select({ id: staff.id })
+    .from(staff)
+    .where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.userId, user.id)));
+  if (linked) {
+    throw new InvalidStateError(
+      "This login belongs to a staff member. Change their status in School Staff instead.",
+    );
+  }
   if (user.status === status) throw new InvalidStateError(`This user is already ${status}.`);
 
   await getDb().transaction(async (tx) => {

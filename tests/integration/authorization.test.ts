@@ -44,6 +44,7 @@ describe.skipIf(!hasDatabase)("authorization", () => {
     return loadAccessForUser({
       id: user.id,
       email: user.email,
+      username: user.username,
       fullName: user.fullName,
       tenantId: user.tenantId,
       sessionId: "test",
@@ -231,7 +232,7 @@ describe.skipIf(!hasDatabase)("authorization", () => {
         branchIds: [],
       });
       expect(
-        await auth.login({ email: emailOf("fresh"), password }, { ip: `t-${run}` }),
+        await auth.login({ identifier: emailOf("fresh"), password }, { ip: `t-${run}` }),
       ).toMatchObject({
         reason: "invalid_credentials",
       });
@@ -242,7 +243,7 @@ describe.skipIf(!hasDatabase)("authorization", () => {
         ),
       ).toEqual({ ok: true });
       const login = await auth.login(
-        { email: emailOf("fresh"), password: "my first password 1" },
+        { identifier: emailOf("fresh"), password: "my first password 1" },
         { ip: `t-${run}` },
       );
       expect(login.ok).toBe(true);
@@ -331,7 +332,7 @@ describe.skipIf(!hasDatabase)("authorization", () => {
         { ip: `t-${run}` },
       );
       const session = await auth.login(
-        { email: emailOf("worker"), password: "worker pass 1234" },
+        { identifier: emailOf("worker"), password: "worker pass 1234" },
         { ip: `t-${run}` },
       );
       expect(session.ok).toBe(true);

@@ -4,7 +4,7 @@ import type { LoginFailure, ResetResult } from "@/lib/auth/service";
 export function loginFailureMessage(failure: LoginFailure): string {
   switch (failure.reason) {
     case "invalid_credentials":
-      return "Incorrect email or password.";
+      return "Incorrect email, username or password.";
     case "rate_limited":
       return `Too many sign-in attempts. Try again in ${minutes(failure.retryAfterSeconds)}.`;
     case "account_disabled":

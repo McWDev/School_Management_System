@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "./_shared";
+import { users } from "./auth";
 import { tenants } from "./tenants";
 
 /** Work types of a school (Teacher, Accountant, Driver, …). Each school manages its own list. */
@@ -36,7 +37,8 @@ export const workTypes = pgTable(
 );
 
 export const staffGender = pgEnum("staff_gender", ["male", "female"]);
-export const staffStatus = pgEnum("staff_status", ["active", "left"]);
+/** Active staff can sign in (if they have login access); inactive and left cannot. */
+export const staffStatus = pgEnum("staff_status", ["active", "inactive", "left"]);
 
 /**
  * School staff (all employees, whatever their work type). Staff who leave are
@@ -60,9 +62,18 @@ export const staff = pgTable(
     location: text("location"),
     hireDate: date("hire_date"),
     status: staffStatus("status").notNull().default("active"),
+    /** Login account of this staff member, when they have login access. */
+    userId: uuid("user_id"),
     ...timestamps,
   },
   (table) => [
+    // The login account must belong to the same school; one account per staff member.
+    foreignKey({
+      name: "staff_user_fk",
+      columns: [table.tenantId, table.userId],
+      foreignColumns: [users.tenantId, users.id],
+    }).onDelete("restrict"),
+    unique("staff_user_unique").on(table.userId),
     // The work type must belong to the same school as the staff member.
     foreignKey({
       name: "staff_work_type_fk",

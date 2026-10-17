@@ -1,7 +1,16 @@
 import "server-only";
-import { and, asc, count, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, ilike, isNull, or, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
-import { staff, staffPhotos, workTypes, type Staff, type WorkType } from "@/db/schema";
+import {
+  sessions,
+  staff,
+  staffPhotos,
+  users,
+  workTypes,
+  type Staff,
+  type WorkType,
+} from "@/db/schema";
+import { hashPassword, newPasswordSchema } from "@/lib/auth/password";
 import { recordAudit } from "@/lib/audit";
 import {
   ConflictError,
@@ -15,7 +24,12 @@ import { escapeLike, paginationSchema, toOffset, toPage, type Page } from "@/lib
 import { assertAllBranches, assertPermission, type TenantContext } from "@/lib/tenant-context";
 import { parseInput } from "@/lib/validation";
 import { uuidSchema } from "@/lib/validation/fields";
-import { staffInputSchema, staffListFilterSchema, workTypeInputSchema } from "./schemas";
+import {
+  staffInputSchema,
+  staffListFilterSchema,
+  usernameSchema,
+  workTypeInputSchema,
+} from "./schemas";
 
 /*
  * School staff and their work types. Staff are school-wide (not per branch):
@@ -169,7 +183,12 @@ export async function deleteWorkType(ctx: TenantContext, workTypeId: string): Pr
 
 // ------------------------------------------------------------------ staff
 
-export type StaffSummary = Staff & { workTypeName: string; photoVersion: number | null };
+export type StaffSummary = Staff & {
+  workTypeName: string;
+  photoVersion: number | null;
+  /** Login username, when the staff member has login access. */
+  username: string | null;
+};
 
 export async function listStaff(
   ctx: TenantContext,
@@ -196,13 +215,19 @@ export async function listStaff(
 
   const [rows, [{ total }]] = await Promise.all([
     db
-      .select({ staff, workTypeName: workTypes.name, photoUpdatedAt: staffPhotos.updatedAt })
+      .select({
+        staff,
+        workTypeName: workTypes.name,
+        photoUpdatedAt: staffPhotos.updatedAt,
+        username: users.username,
+      })
       .from(staff)
       .innerJoin(
         workTypes,
         and(eq(workTypes.id, staff.workTypeId), eq(workTypes.tenantId, staff.tenantId)),
       )
       .leftJoin(staffPhotos, eq(staffPhotos.staffId, staff.id))
+      .leftJoin(users, and(eq(users.id, staff.userId), eq(users.tenantId, staff.tenantId)))
       .where(where)
       .orderBy(asc(staff.fullName), staff.id)
       .limit(pageInput.pageSize)
@@ -213,6 +238,7 @@ export async function listStaff(
     ...row.staff,
     workTypeName: row.workTypeName,
     photoVersion: row.photoUpdatedAt ? row.photoUpdatedAt.getTime() : null,
+    username: row.username,
   }));
   return toPage(items, total, pageInput);
 }
@@ -260,44 +286,130 @@ async function savePhoto(
     });
 }
 
-/** Add a staff member, optionally with a photo (PNG/JPEG/WebP, ≤ 1 MB). */
+/**
+ * Login access requested in the staff form. On create both fields are needed;
+ * on edit an empty password keeps the current one.
+ */
+export type StaffLoginInput = { username?: string; password?: string };
+
+type CheckedLogin = { username: string; passwordHash: string | null };
+
+const duplicateUsername = () =>
+  new ConflictError("This username is already taken.", {
+    username: ["This username is already taken."],
+  });
+
+/** Validate requested login access; returns null when none was asked for. */
+async function checkLogin(
+  login: StaffLoginInput | undefined,
+  options: { passwordRequired: boolean },
+): Promise<CheckedLogin | null> {
+  const username = login?.username?.trim() ?? "";
+  const password = login?.password ?? "";
+  if (!username && !password) return null;
+
+  const fieldErrors: Record<string, string[]> = {};
+  const parsedUsername = usernameSchema.safeParse(username);
+  if (!username) fieldErrors.username = ["Enter a username."];
+  else if (!parsedUsername.success) {
+    fieldErrors.username = parsedUsername.error.issues.map((i) => i.message);
+  }
+  if (password || options.passwordRequired) {
+    const parsedPassword = newPasswordSchema.safeParse(password);
+    if (!password) fieldErrors.password = ["Enter a password."];
+    else if (!parsedPassword.success) {
+      fieldErrors.password = parsedPassword.error.issues.map((i) => i.message);
+    }
+  }
+  if (Object.keys(fieldErrors).length) throw new ValidationError(undefined, fieldErrors);
+
+  return {
+    username: parsedUsername.data!,
+    passwordHash: password ? await hashPassword(password) : null,
+  };
+}
+
+/** Only Active staff may sign in; Inactive and Left are blocked and signed out. */
+function accountStatusFor(status: Staff["status"]) {
+  return status === "active" ? ("active" as const) : ("disabled" as const);
+}
+
+async function revokeSessions(tx: Executor, userId: string, reason: string) {
+  await tx
+    .update(sessions)
+    .set({ revokedAt: new Date(), revokedReason: reason })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+}
+
+/** Add a staff member, optionally with a photo and login access. */
 export async function createStaff(
   ctx: TenantContext,
   input: unknown,
   photo?: Uint8Array | null,
+  login?: StaffLoginInput,
 ): Promise<Staff> {
   assertCanManage(ctx);
   const data = parseInput(staffInputSchema, input);
   const checkedPhoto = checkPhoto(photo);
+  const checkedLogin = await checkLogin(login, { passwordRequired: true });
   await assertWorkTypeInSchool(ctx, data.workTypeId);
 
-  return getDb().transaction(async (tx) => {
-    const [created] = await tx
-      .insert(staff)
-      .values({ ...data, tenantId: ctx.tenantId })
-      .returning();
-    if (checkedPhoto) await savePhoto(tx, ctx.tenantId, created.id, checkedPhoto);
-    await recordAudit(
-      {
-        tenantId: ctx.tenantId,
-        actorUserId: ctx.actorUserId,
-        action: "staff.created",
-        entityType: "staff",
-        entityId: created.id,
-        after: { ...created, photo: Boolean(checkedPhoto) },
-      },
-      tx,
-    );
-    return created;
-  });
+  try {
+    return await getDb().transaction(async (tx) => {
+      let userId: string | null = null;
+      if (checkedLogin) {
+        const [user] = await tx
+          .insert(users)
+          .values({
+            tenantId: ctx.tenantId,
+            username: checkedLogin.username,
+            fullName: data.fullName,
+            passwordHash: checkedLogin.passwordHash!,
+            status: accountStatusFor(data.status),
+            passwordChangedAt: new Date(),
+          })
+          .returning({ id: users.id });
+        userId = user.id;
+      }
+      const [created] = await tx
+        .insert(staff)
+        .values({ ...data, tenantId: ctx.tenantId, userId })
+        .returning();
+      if (checkedPhoto) await savePhoto(tx, ctx.tenantId, created.id, checkedPhoto);
+      await recordAudit(
+        {
+          tenantId: ctx.tenantId,
+          actorUserId: ctx.actorUserId,
+          action: "staff.created",
+          entityType: "staff",
+          entityId: created.id,
+          after: {
+            ...created,
+            photo: Boolean(checkedPhoto),
+            login: checkedLogin ? checkedLogin.username : null,
+          },
+        },
+        tx,
+      );
+      return created;
+    });
+  } catch (error) {
+    if (isUniqueViolation(error, "users_username_unique")) throw duplicateUsername();
+    throw error;
+  }
 }
 
-/** Edit a staff member. `photo` replaces the photo; `removePhoto` deletes it. */
+/**
+ * Edit a staff member. `photo` replaces the photo; `removePhoto` deletes it.
+ * `login` gives login access (username + password) or changes the username or
+ * password of an existing login. The account follows the staff status:
+ * Inactive or Left disables it and signs the person out everywhere.
+ */
 export async function updateStaff(
   ctx: TenantContext,
   staffId: string,
   input: unknown,
-  options: { photo?: Uint8Array | null; removePhoto?: boolean } = {},
+  options: { photo?: Uint8Array | null; removePhoto?: boolean; login?: StaffLoginInput } = {},
 ): Promise<Staff> {
   assertCanManage(ctx);
   const id = parseId(staffId);
@@ -305,41 +417,140 @@ export async function updateStaff(
   const checkedPhoto = checkPhoto(options.photo);
   await assertWorkTypeInSchool(ctx, data.workTypeId);
 
-  return getDb().transaction(async (tx) => {
-    const [before] = await tx
+  const [existing] = await getDb()
+    .select({ userId: staff.userId })
+    .from(staff)
+    .where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.id, id)));
+  if (!existing) throw new NotFoundError();
+  // A new login needs a password; an existing one keeps it unless a new one is given.
+  const checkedLogin = await checkLogin(options.login, { passwordRequired: !existing.userId });
+
+  try {
+    return await getDb().transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(staff)
+        .where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.id, id)))
+        .for("update");
+      if (!before) throw new NotFoundError();
+
+      let userId = before.userId;
+      const accountStatus = accountStatusFor(data.status);
+      if (userId) {
+        const [account] = await tx
+          .select({ status: users.status, username: users.username })
+          .from(users)
+          .where(and(eq(users.id, userId), eq(users.tenantId, ctx.tenantId)));
+        await tx
+          .update(users)
+          .set({
+            fullName: data.fullName,
+            status: accountStatus,
+            ...(checkedLogin ? { username: checkedLogin.username } : {}),
+            ...(checkedLogin?.passwordHash
+              ? { passwordHash: checkedLogin.passwordHash, passwordChangedAt: new Date() }
+              : {}),
+          })
+          .where(and(eq(users.id, userId), eq(users.tenantId, ctx.tenantId)));
+        if (accountStatus === "disabled" && account?.status === "active") {
+          await revokeSessions(tx, userId, `staff_${data.status}`);
+        } else if (checkedLogin?.passwordHash) {
+          await revokeSessions(tx, userId, "password_changed");
+        }
+      } else if (checkedLogin) {
+        const [user] = await tx
+          .insert(users)
+          .values({
+            tenantId: ctx.tenantId,
+            username: checkedLogin.username,
+            fullName: data.fullName,
+            passwordHash: checkedLogin.passwordHash!,
+            status: accountStatus,
+            passwordChangedAt: new Date(),
+          })
+          .returning({ id: users.id });
+        userId = user.id;
+      }
+
+      const [updated] = await tx
+        .update(staff)
+        .set({ ...data, userId })
+        .where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.id, id)))
+        .returning();
+      if (checkedPhoto) {
+        await savePhoto(tx, ctx.tenantId, id, checkedPhoto);
+      } else if (options.removePhoto) {
+        await tx
+          .delete(staffPhotos)
+          .where(and(eq(staffPhotos.tenantId, ctx.tenantId), eq(staffPhotos.staffId, id)));
+      }
+      await recordAudit(
+        {
+          tenantId: ctx.tenantId,
+          actorUserId: ctx.actorUserId,
+          action: "staff.updated",
+          entityType: "staff",
+          entityId: id,
+          before,
+          after: {
+            ...updated,
+            photo: checkedPhoto ? "replaced" : options.removePhoto ? "removed" : "unchanged",
+            login: checkedLogin
+              ? {
+                  username: checkedLogin.username,
+                  password: checkedLogin.passwordHash ? "changed" : "unchanged",
+                }
+              : "unchanged",
+          },
+        },
+        tx,
+      );
+      return updated;
+    });
+  } catch (error) {
+    if (isUniqueViolation(error, "users_username_unique")) throw duplicateUsername();
+    throw error;
+  }
+}
+
+/**
+ * Permanently delete a staff member (product owner, 2026-10-17): the record,
+ * their photo and their login account, which signs them out everywhere.
+ * The audit log keeps who deleted whom.
+ */
+export async function deleteStaff(ctx: TenantContext, staffId: string): Promise<void> {
+  assertCanManage(ctx);
+  const id = parseId(staffId);
+  await getDb().transaction(async (tx) => {
+    const [member] = await tx
       .select()
       .from(staff)
       .where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.id, id)))
       .for("update");
-    if (!before) throw new NotFoundError();
-    const [updated] = await tx
-      .update(staff)
-      .set(data)
-      .where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.id, id)))
-      .returning();
-    if (checkedPhoto) {
-      await savePhoto(tx, ctx.tenantId, id, checkedPhoto);
-    } else if (options.removePhoto) {
+    if (!member) throw new NotFoundError();
+    if (member.userId && member.userId === ctx.actorUserId) {
+      throw new InvalidStateError("You cannot delete the staff record of your own login.");
+    }
+
+    // The photo goes with the record (foreign key cascade).
+    await tx.delete(staff).where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.id, id)));
+    if (member.userId) {
+      // Sessions, reset links and role links are removed with the account.
       await tx
-        .delete(staffPhotos)
-        .where(and(eq(staffPhotos.tenantId, ctx.tenantId), eq(staffPhotos.staffId, id)));
+        .delete(users)
+        .where(and(eq(users.id, member.userId), eq(users.tenantId, ctx.tenantId)));
     }
     await recordAudit(
       {
         tenantId: ctx.tenantId,
         actorUserId: ctx.actorUserId,
-        action: "staff.updated",
+        action: "staff.deleted",
         entityType: "staff",
         entityId: id,
-        before,
-        after: {
-          ...updated,
-          photo: checkedPhoto ? "replaced" : options.removePhoto ? "removed" : "unchanged",
-        },
+        before: { ...member, hadLogin: Boolean(member.userId) },
       },
       tx,
     );
-    return updated;
   });
 }
 

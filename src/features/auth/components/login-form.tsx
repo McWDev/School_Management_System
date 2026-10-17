@@ -17,14 +17,19 @@ export function LoginForm() {
     <form action={formAction} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={next} />
       {state.error && <FormAlert>{state.error}</FormAlert>}
-      <FormField id="email" label="Email" error={state.fieldErrors?.email?.[0]}>
+      <FormField
+        id="identifier"
+        label="Email or username"
+        error={state.fieldErrors?.identifier?.[0]}
+      >
         {(props) => (
           <Input
             {...props}
-            name="email"
-            type="email"
+            name="identifier"
+            type="text"
             autoComplete="username"
-            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
             defaultValue={state.email}
             autoFocus
           />
