@@ -1,0 +1,221 @@
+import {
+  BookOpen,
+  Building2,
+  CalendarCheck,
+  CalendarClock,
+  CalendarRange,
+  ChartColumn,
+  ClipboardCheck,
+  ClipboardList,
+  GraduationCap,
+  Landmark,
+  LayoutDashboard,
+  Presentation,
+  Receipt,
+  School,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserCog,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+
+export type NavItem = {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  /** Short description shown on the module page header. */
+  description: string;
+  /**
+   * Permission key required to see this item (07-Authentication-Roles-Security.md).
+   * Hiding a menu item is not authorization: pages and actions check on the server.
+   */
+  permission: string;
+};
+
+export type NavGroup = {
+  /** Group heading; null for top-level items without a heading. */
+  title: string | null;
+  items: NavItem[];
+};
+
+export const navGroups: NavGroup[] = [
+  {
+    title: null,
+    items: [
+      {
+        title: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+        description: "Overview of your school.",
+        permission: "dashboard.read",
+      },
+    ],
+  },
+  {
+    title: "Academic",
+    items: [
+      {
+        title: "Classes",
+        href: "/classes",
+        icon: School,
+        description: "Manage classes by branch and academic year.",
+        permission: "classes.read",
+      },
+      {
+        title: "Students",
+        href: "/students",
+        icon: GraduationCap,
+        description: "Student profiles, admissions and enrollments.",
+        permission: "students.read",
+      },
+      {
+        title: "Teachers",
+        href: "/teachers",
+        icon: Presentation,
+        description: "Teacher profiles and class/course assignments.",
+        permission: "teachers.read",
+      },
+      {
+        title: "Courses / Subjects",
+        href: "/courses",
+        icon: BookOpen,
+        description: "Courses and subjects taught at your school.",
+        permission: "courses.read",
+      },
+      {
+        title: "Exams",
+        href: "/exams",
+        icon: ClipboardList,
+        description: "Exam setup, marks entry and results.",
+        permission: "exams.read",
+      },
+      {
+        title: "Attendance",
+        href: "/attendance",
+        icon: CalendarCheck,
+        description: "Daily attendance by class.",
+        permission: "attendance.read",
+      },
+      {
+        title: "Timetable",
+        href: "/timetable",
+        icon: CalendarClock,
+        description: "Weekly class timetables.",
+        permission: "timetable.read",
+      },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      {
+        title: "School Fees",
+        href: "/fees",
+        icon: Wallet,
+        description: "Fee structures, student charges and balances.",
+        permission: "fees.read",
+      },
+      {
+        title: "Payments",
+        href: "/fees/payments",
+        icon: Receipt,
+        description: "Recorded payments and receipts.",
+        permission: "fees.read",
+      },
+    ],
+  },
+  {
+    title: null,
+    items: [
+      {
+        title: "Reports",
+        href: "/reports",
+        icon: ChartColumn,
+        description: "Filterable reports with print and CSV export.",
+        permission: "reports.read",
+      },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      {
+        title: "Academic Years",
+        href: "/settings/academic-years",
+        icon: CalendarRange,
+        description: "Academic years and the current year.",
+        permission: "academic_years.read",
+      },
+      {
+        title: "Branches",
+        href: "/settings/branches",
+        icon: Building2,
+        description: "Your school's branches.",
+        permission: "branches.read",
+      },
+      {
+        title: "School Registrations",
+        href: "/settings/school-registrations",
+        icon: ClipboardCheck,
+        description: "School registration details and status.",
+        permission: "schools.read",
+      },
+      {
+        title: "Users",
+        href: "/settings/users",
+        icon: UserCog,
+        description: "User accounts and branch access.",
+        permission: "users.manage",
+      },
+      {
+        title: "Roles & Permissions",
+        href: "/settings/roles",
+        icon: ShieldCheck,
+        description: "Roles and the permissions they grant.",
+        permission: "roles.manage",
+      },
+      {
+        title: "School Profile",
+        href: "/settings/school-profile",
+        icon: Landmark,
+        description: "School name, logo and contact details.",
+        permission: "settings.manage",
+      },
+      {
+        title: "General Settings",
+        href: "/settings/general",
+        icon: SlidersHorizontal,
+        description: "Timezone, currency, grading and other preferences.",
+        permission: "settings.manage",
+      },
+    ],
+  },
+];
+
+export const allNavItems: NavItem[] = navGroups.flatMap((group) => group.items);
+
+/** Keep only items the user may see; drop groups left empty. */
+export function filterNavGroups(groups: NavGroup[], permissions: ReadonlySet<string>): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => permissions.has(item.permission)),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+/** Whether `pathname` is the item's page or one of its sub-pages. */
+export function isNavItemActive(item: NavItem, pathname: string): boolean {
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
+/**
+ * The nav item that best matches `pathname` (longest href wins, so
+ * /fees/payments resolves to Payments rather than School Fees).
+ */
+export function findActiveNavItem(pathname: string): NavItem | undefined {
+  return allNavItems
+    .filter((item) => isNavItemActive(item, pathname))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+}

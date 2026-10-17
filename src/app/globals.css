@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. One brand color (primary), neutral surfaces and semantic
+ * success/warning/danger colors. Components use the Tailwind names mapped in
+ * @theme below (e.g. bg-primary, text-muted-foreground), never raw colors.
+ */
+:root {
+  --radius: 0.5rem;
+
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.21 0.02 257);
+  --surface: oklch(1 0 0);
+  --surface-foreground: var(--foreground);
+  --muted: oklch(0.965 0.004 247);
+  --muted-foreground: oklch(0.5 0.02 257);
+  --border: oklch(0.92 0.006 247);
+  --input: oklch(0.88 0.008 247);
+  --ring: oklch(0.55 0.17 262);
+
+  --primary: oklch(0.5 0.17 262);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-soft: oklch(0.95 0.03 262);
+
+  --success: oklch(0.55 0.13 155);
+  --success-soft: oklch(0.95 0.04 155);
+  --warning: oklch(0.6 0.13 70);
+  --warning-soft: oklch(0.96 0.05 85);
+  --danger: oklch(0.55 0.2 27);
+  --danger-foreground: oklch(0.99 0 0);
+  --danger-soft: oklch(0.96 0.03 27);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.35 0.02 257);
+  --sidebar-active: var(--primary-soft);
+  --sidebar-active-foreground: var(--primary);
+
+  --shadow-card: 0 1px 2px 0 oklch(0.21 0.02 257 / 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.17 0.01 257);
+    --foreground: oklch(0.95 0.005 247);
+    --surface: oklch(0.21 0.012 257);
+    --surface-foreground: var(--foreground);
+    --muted: oklch(0.25 0.012 257);
+    --muted-foreground: oklch(0.7 0.015 257);
+    --border: oklch(0.3 0.012 257);
+    --input: oklch(0.36 0.012 257);
+    --ring: oklch(0.68 0.15 262);
+
+    --primary: oklch(0.68 0.15 262);
+    --primary-foreground: oklch(0.15 0.02 262);
+    --primary-soft: oklch(0.3 0.06 262);
+
+    --success: oklch(0.72 0.14 155);
+    --success-soft: oklch(0.3 0.05 155);
+    --warning: oklch(0.8 0.13 80);
+    --warning-soft: oklch(0.32 0.05 80);
+    --danger: oklch(0.7 0.17 27);
+    --danger-foreground: oklch(0.15 0.02 27);
+    --danger-soft: oklch(0.32 0.06 27);
+
+    --sidebar: oklch(0.2 0.012 257);
+    --sidebar-foreground: oklch(0.82 0.01 257);
+    --sidebar-active: var(--primary-soft);
+    --sidebar-active-foreground: oklch(0.88 0.08 262);
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+
+  --shadow-card: var(--shadow-card);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
