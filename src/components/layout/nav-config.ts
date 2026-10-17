@@ -41,7 +41,11 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-export const navGroups: NavGroup[] = [
+/**
+ * Every module page with its title, icon and permission. Used for page titles
+ * and module placeholders; NOT all of these are shown in the sidebar.
+ */
+const moduleGroups: NavGroup[] = [
   {
     title: null,
     items: [
@@ -196,7 +200,15 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
-export const allNavItems: NavItem[] = navGroups.flatMap((group) => group.items);
+export const allNavItems: NavItem[] = moduleGroups.flatMap((group) => group.items);
+
+/**
+ * Sidebar tabs. Per the product owner (2026-10-17), only Dashboard is shown
+ * until they decide which tabs to add back.
+ */
+export const navGroups: NavGroup[] = [
+  { title: null, items: allNavItems.filter((item) => item.href === "/dashboard") },
+];
 
 export function isNavItemVisible(item: NavItem, permissions: ReadonlySet<string>): boolean {
   if (item.permission === null) return true;

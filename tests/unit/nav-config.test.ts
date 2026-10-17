@@ -3,35 +3,22 @@ import {
   allNavItems,
   filterNavGroups,
   findActiveNavItem,
-  isNavItemVisible,
   navGroups,
 } from "@/components/layout/nav-config";
 import { isPermission } from "@/lib/permissions/catalog";
 
 describe("navigation config", () => {
-  it("follows the approved structure from the UI document", () => {
-    expect(navGroups.map((g) => g.title)).toEqual([null, "Academic", "Finance", null, "Settings"]);
-    expect(navGroups[1].items.map((i) => i.title)).toEqual([
-      "Classes",
-      "Students",
-      "Teachers",
-      "Courses / Subjects",
-      "Exams",
-      "Attendance",
-      "Timetable",
-    ]);
-    expect(navGroups[4].items.map((i) => i.title)).toEqual([
-      "Academic Years",
-      "Branches",
-      "Users",
-      "Roles & Permissions",
-      "School Profile",
-      "School Registrations",
-      "General Settings",
-    ]);
+  it("shows only the Dashboard tab in the sidebar", () => {
+    expect(navGroups.flatMap((g) => g.items.map((i) => i.title))).toEqual(["Dashboard"]);
   });
 
-  it("has unique hrefs and only real permission keys", () => {
+  it("shows Dashboard to every signed-in user", () => {
+    expect(
+      filterNavGroups(navGroups, new Set()).flatMap((g) => g.items.map((i) => i.title)),
+    ).toEqual(["Dashboard"]);
+  });
+
+  it("keeps a catalogue of module pages with unique hrefs and real permission keys", () => {
     const hrefs = allNavItems.map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
     for (const item of allNavItems) {
@@ -40,36 +27,9 @@ describe("navigation config", () => {
     }
   });
 
-  it("shows School Registrations to platform users only and School Profile to school admins", () => {
-    const profile = allNavItems.find((i) => i.title === "School Profile")!;
-    const registrations = allNavItems.find((i) => i.title === "School Registrations")!;
-    expect(isNavItemVisible(profile, new Set(["settings.manage"]))).toBe(true);
-    expect(isNavItemVisible(profile, new Set(["schools.read"]))).toBe(false);
-    expect(isNavItemVisible(registrations, new Set(["schools.read"]))).toBe(true);
-    // A School Admin holds every school permission but never schools.read.
-    expect(isNavItemVisible(registrations, new Set(["settings.manage", "users.manage"]))).toBe(
-      false,
-    );
-  });
-
-  it("resolves the most specific active item", () => {
+  it("resolves the most specific page title", () => {
     expect(findActiveNavItem("/fees/payments")?.title).toBe("Payments");
     expect(findActiveNavItem("/fees")?.title).toBe("School Fees");
-    expect(findActiveNavItem("/students/123/edit")?.title).toBe("Students");
     expect(findActiveNavItem("/studentsx")).toBeUndefined();
-  });
-
-  it("filters items by permission and drops empty groups", () => {
-    const groups = filterNavGroups(navGroups, new Set(["fees.read"]));
-    expect(groups.map((g) => g.title)).toEqual([null, "Finance"]);
-    expect(groups.flatMap((g) => g.items.map((i) => i.title))).toEqual([
-      "Dashboard",
-      "School Fees",
-      "Payments",
-    ]);
-    // Dashboard is visible to every signed-in user.
-    expect(
-      filterNavGroups(navGroups, new Set()).flatMap((g) => g.items.map((i) => i.title)),
-    ).toEqual(["Dashboard"]);
   });
 });

@@ -13,15 +13,14 @@ test("dashboard shows no fabricated metrics", async ({ page }) => {
   await expect(page.getByText("No payments recorded yet")).toBeVisible();
 });
 
-test("navigation reaches a module placeholder", async ({ page, isMobile }) => {
+test("the sidebar shows only the Dashboard tab", async ({ page, isMobile }) => {
   await page.goto("/dashboard");
   if (isMobile) {
     await page.getByRole("button", { name: "Open navigation menu" }).click();
   }
-  await page.getByRole("link", { name: "Students" }).click();
-  await expect(page).toHaveURL(/\/students$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Students");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(nav.getByRole("link")).toHaveCount(1);
+  await expect(nav.getByRole("link", { name: "Dashboard" })).toBeVisible();
 });
 
 test("unknown pages show a 404", async ({ page }) => {
