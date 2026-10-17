@@ -9,7 +9,7 @@ test("root redirects to the dashboard", async ({ page }) => {
   );
 });
 
-test("the sidebar shows Dashboard, Classes and School Staff to the school admin", async ({
+test("the sidebar shows Dashboard, Academic Year, Classes and School Staff to the school admin", async ({
   page,
   isMobile,
 }) => {
@@ -18,7 +18,12 @@ test("the sidebar shows Dashboard, Classes and School Staff to the school admin"
     await page.getByRole("button", { name: "Open navigation menu" }).click();
   }
   const nav = page.getByRole("navigation", { name: "Main navigation" });
-  await expect(nav.getByRole("link")).toHaveText(["Dashboard", "Classes", "School Staff"]);
+  await expect(nav.getByRole("link")).toHaveText([
+    "Dashboard",
+    "Academic Year",
+    "Classes",
+    "School Staff",
+  ]);
   await nav.getByRole("link", { name: "School Staff" }).click();
   await expect(page).toHaveURL(/\/staff$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("School Staff");

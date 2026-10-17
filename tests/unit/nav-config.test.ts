@@ -8,9 +8,10 @@ import {
 import { isPermission } from "@/lib/permissions/catalog";
 
 describe("navigation config", () => {
-  it("shows Dashboard, Classes and School Staff in that order", () => {
+  it("shows Dashboard, Academic Year, Classes and School Staff in that order", () => {
     expect(navGroups.flatMap((g) => g.items.map((i) => i.title))).toEqual([
       "Dashboard",
+      "Academic Year",
       "Classes",
       "School Staff",
     ]);
@@ -26,6 +27,7 @@ describe("navigation config", () => {
       "Classes",
       "School Staff",
     ]);
+    expect(titles(["academic_years.read"])).toEqual(["Dashboard", "Academic Year"]);
     expect(titles(["students.read"])).toEqual(["Dashboard"]);
   });
 

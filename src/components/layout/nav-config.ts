@@ -155,10 +155,10 @@ const moduleGroups: NavGroup[] = [
     title: "Settings",
     items: [
       {
-        title: "Academic Years",
-        href: "/settings/academic-years",
+        title: "Academic Year",
+        href: "/academic-years",
         icon: CalendarRange,
-        description: "Academic years and the current year.",
+        description: "The learning years of your school. One year is Current at a time.",
         permission: "academic_years.read",
       },
       {
@@ -214,7 +214,7 @@ export const allNavItems: NavItem[] = moduleGroups.flatMap((group) => group.item
  * Sidebar tabs, added one at a time as the product owner asks (2026-10-17),
  * in this order: Dashboard, Classes, School Staff.
  */
-const SIDEBAR_HREFS = ["/dashboard", "/classes", "/staff"];
+const SIDEBAR_HREFS = ["/dashboard", "/academic-years", "/classes", "/staff"];
 
 export const navGroups: NavGroup[] = [
   {

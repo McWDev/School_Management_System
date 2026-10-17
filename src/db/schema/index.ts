@@ -8,3 +8,4 @@ export * from "./auth";
 export * from "./access";
 export * from "./staff";
 export * from "./classes";
+export * from "./academic-years";

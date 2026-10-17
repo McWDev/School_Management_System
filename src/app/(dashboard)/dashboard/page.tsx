@@ -26,6 +26,7 @@ import {
   getPlatformDashboard,
   getStaffDashboard,
 } from "@/features/dashboard/queries";
+import { getCurrentAcademicYear } from "@/features/academic-years/repository";
 import { getOwnSchool, getSchoolLogoVersion } from "@/features/tenants/repository";
 import { requireAccess, type Access } from "@/lib/authz";
 import { can, type TenantContext } from "@/lib/tenant-context";
@@ -57,7 +58,11 @@ export default async function DashboardPage() {
 // ------------------------------------------------------------------ school
 
 async function SchoolDashboard({ access, ctx }: { access: Access; ctx: TenantContext }) {
-  const [school, logoVersion] = await Promise.all([getOwnSchool(ctx), getSchoolLogoVersion(ctx)]);
+  const [school, logoVersion, academicYear] = await Promise.all([
+    getOwnSchool(ctx),
+    getSchoolLogoVersion(ctx),
+    can(ctx, "academic_years.read") ? getCurrentAcademicYear(ctx) : undefined,
+  ]);
   const logoSrc = logoVersion ? `/api/school-logo?v=${logoVersion}` : null;
   const banner = {
     userName: access.user.fullName,
@@ -65,6 +70,7 @@ async function SchoolDashboard({ access, ctx }: { access: Access; ctx: TenantCon
     motto: school.motto,
     logoSrc,
     timezone: school.timezone,
+    academicYear: academicYear === undefined ? undefined : (academicYear?.name ?? null),
   };
 
   if (!can(ctx, "staff.read")) {

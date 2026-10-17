@@ -1,4 +1,5 @@
-import { GraduationCap } from "lucide-react";
+import Link from "next/link";
+import { CalendarRange, GraduationCap } from "lucide-react";
 
 /** Greeting for the hour of day in the school's time zone. */
 function greetingFor(timezone: string, now: Date) {
@@ -20,6 +21,7 @@ export function WelcomeBanner({
   timezone,
   heroValue,
   heroLabel,
+  academicYear,
 }: {
   userName: string;
   schoolName: string;
@@ -29,6 +31,8 @@ export function WelcomeBanner({
   /** The one headline figure of the dashboard (optional). */
   heroValue?: number;
   heroLabel?: string;
+  /** Current academic year name; null when none is set; omitted when the viewer can't see years. */
+  academicYear?: string | null;
 }) {
   const now = new Date();
   const firstName = userName.split(" ")[0];
@@ -78,6 +82,17 @@ export function WelcomeBanner({
               {schoolName}
               {motto && <span className="italic text-white/70"> · “{motto}”</span>}
             </p>
+            {academicYear !== undefined && (
+              <Link
+                href="/academic-years"
+                className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium text-white hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-white"
+              >
+                <CalendarRange className="size-3.5" aria-hidden="true" />
+                {academicYear
+                  ? `Academic year ${academicYear}`
+                  : "No current academic year — set one"}
+              </Link>
+            )}
           </div>
         </div>
 

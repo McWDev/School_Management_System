@@ -1,7 +1,6 @@
-import { ModulePlaceholder, placeholderMetadata } from "@/components/layout/module-placeholder";
+import { redirect } from "next/navigation";
 
-export const metadata = placeholderMetadata("/settings/academic-years");
-
+/** Academic years moved to their own sidebar tab. */
 export default function Page() {
-  return <ModulePlaceholder href="/settings/academic-years" />;
+  redirect("/academic-years");
 }

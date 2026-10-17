@@ -4,7 +4,7 @@ import { signInAs } from "./helpers";
 
 /*
  * Role-based access with the synthetic demo users from `npm run db:seed`.
- * The sidebar currently shows Dashboard and School Staff (product owner, 2026-10-17);
+ * The sidebar currently shows Dashboard, Academic Year, Classes and School Staff (product owner, 2026-10-17);
  * pages are opened by URL to prove the server still enforces access.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -40,7 +40,7 @@ const SCHOOL_PAGES = [
   "/fees",
   "/fees/payments",
   "/reports",
-  "/settings/academic-years",
+  "/academic-years",
   "/settings/branches",
   "/settings/users",
   "/settings/roles",
@@ -56,12 +56,12 @@ async function expectTabs(page: Page, isMobile: boolean, tabs: string[]) {
   if (isMobile) await page.keyboard.press("Escape");
 }
 
-test("school admin sees Dashboard, Classes and School Staff and can open every school page", async ({
+test("school admin sees Dashboard, Academic Year, Classes and School Staff and can open every school page", async ({
   page,
   isMobile,
 }) => {
   await signInAs(page, "admin@demo-hodan.example");
-  await expectTabs(page, isMobile, ["Dashboard", "Classes", "School Staff"]);
+  await expectTabs(page, isMobile, ["Dashboard", "Academic Year", "Classes", "School Staff"]);
   for (const path of SCHOOL_PAGES) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -106,6 +106,7 @@ test("teacher is refused admin pages on the server", async ({ page, isMobile }) 
   // Teachers may view classes (read-only), nothing else yet.
   await expectTabs(page, isMobile, ["Dashboard", "Classes"]);
   for (const path of [
+    "/academic-years",
     "/staff",
     "/settings/users",
     "/settings/branches",
