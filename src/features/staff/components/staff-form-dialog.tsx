@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { UserRound } from "lucide-react";
+import { keepValues } from "@/components/forms/keep-values";
 import { FormAlert } from "@/components/forms/form-alert";
 import { FormField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
@@ -109,7 +110,7 @@ function StaffForm({
   const shownPhoto = preview ?? (removePhoto ? null : (photoSrc ?? null));
 
   return (
-    <form action={formAction} className="flex flex-col gap-4" noValidate>
+    <form onSubmit={keepValues(formAction)} className="flex flex-col gap-4" noValidate>
       {state.status === "error" && <FormAlert>{state.message}</FormAlert>}
 
       <div className="flex items-center gap-4">

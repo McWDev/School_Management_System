@@ -53,6 +53,7 @@ export async function deleteTestData(tenantIds: string[], platformUserIds: strin
     // Staff may point at login accounts, so they go before users.
     await db.delete(schema.staff).where(inArray(schema.staff.tenantId, tenantIds));
     await db.delete(schema.workTypes).where(inArray(schema.workTypes.tenantId, tenantIds));
+    await db.delete(schema.classes).where(inArray(schema.classes.tenantId, tenantIds));
   }
   if (userIds.length) await db.delete(schema.users).where(inArray(schema.users.id, userIds));
   if (tenantIds.length) {

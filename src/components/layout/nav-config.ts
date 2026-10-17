@@ -73,7 +73,7 @@ const moduleGroups: NavGroup[] = [
         title: "Classes",
         href: "/classes",
         icon: School,
-        description: "Manage classes by branch and academic year.",
+        description: "All classes of your school and how many students each can hold.",
         permission: "classes.read",
       },
       {
@@ -211,13 +211,15 @@ const moduleGroups: NavGroup[] = [
 export const allNavItems: NavItem[] = moduleGroups.flatMap((group) => group.items);
 
 /**
- * Sidebar tabs, added one at a time as the product owner asks (2026-10-17):
- * Dashboard, then School Staff.
+ * Sidebar tabs, added one at a time as the product owner asks (2026-10-17),
+ * in this order: Dashboard, Classes, School Staff.
  */
+const SIDEBAR_HREFS = ["/dashboard", "/classes", "/staff"];
+
 export const navGroups: NavGroup[] = [
   {
     title: null,
-    items: allNavItems.filter((item) => ["/dashboard", "/staff"].includes(item.href)),
+    items: SIDEBAR_HREFS.map((href) => allNavItems.find((item) => item.href === href)!),
   },
 ];
 

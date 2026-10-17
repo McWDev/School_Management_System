@@ -8,9 +8,10 @@ import {
 import { isPermission } from "@/lib/permissions/catalog";
 
 describe("navigation config", () => {
-  it("shows Dashboard and School Staff in the sidebar", () => {
+  it("shows Dashboard, Classes and School Staff in that order", () => {
     expect(navGroups.flatMap((g) => g.items.map((i) => i.title))).toEqual([
       "Dashboard",
+      "Classes",
       "School Staff",
     ]);
   });
@@ -19,6 +20,12 @@ describe("navigation config", () => {
     const titles = (perms: string[]) =>
       filterNavGroups(navGroups, new Set(perms)).flatMap((g) => g.items.map((i) => i.title));
     expect(titles(["staff.read"])).toEqual(["Dashboard", "School Staff"]);
+    expect(titles(["classes.read"])).toEqual(["Dashboard", "Classes"]);
+    expect(titles(["classes.read", "staff.read"])).toEqual([
+      "Dashboard",
+      "Classes",
+      "School Staff",
+    ]);
     expect(titles(["students.read"])).toEqual(["Dashboard"]);
   });
 

@@ -56,12 +56,12 @@ async function expectTabs(page: Page, isMobile: boolean, tabs: string[]) {
   if (isMobile) await page.keyboard.press("Escape");
 }
 
-test("school admin sees Dashboard and School Staff and can open every school page", async ({
+test("school admin sees Dashboard, Classes and School Staff and can open every school page", async ({
   page,
   isMobile,
 }) => {
   await signInAs(page, "admin@demo-hodan.example");
-  await expectTabs(page, isMobile, ["Dashboard", "School Staff"]);
+  await expectTabs(page, isMobile, ["Dashboard", "Classes", "School Staff"]);
   for (const path of SCHOOL_PAGES) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -103,7 +103,8 @@ test("school admin sees users with their roles", async ({ page, isMobile }) => {
 
 test("teacher is refused admin pages on the server", async ({ page, isMobile }) => {
   await signInAs(page, "teacher@demo-hodan.example");
-  await expectTabs(page, isMobile, ["Dashboard"]);
+  // Teachers may view classes (read-only), nothing else yet.
+  await expectTabs(page, isMobile, ["Dashboard", "Classes"]);
   for (const path of [
     "/staff",
     "/settings/users",
