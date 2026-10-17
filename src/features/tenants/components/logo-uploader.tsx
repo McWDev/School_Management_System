@@ -58,9 +58,7 @@ export function LogoUploader({
       </div>
       <form ref={formRef} action={formAction} className="flex flex-1 flex-col gap-3">
         {state.status === "error" && <FormAlert>{state.message}</FormAlert>}
-        {state.status === "success" && (
-          <FormAlert tone="success">{state.message}</FormAlert>
-        )}
+        {state.status === "success" && <FormAlert tone="success">{state.message}</FormAlert>}
         <label htmlFor="school-logo" className="text-sm font-medium">
           School logo
         </label>
