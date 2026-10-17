@@ -1,0 +1,1 @@
+ALTER TABLE "tenants" DROP COLUMN "logo_url";

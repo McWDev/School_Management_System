@@ -139,4 +139,5 @@ No third-party auth provider. Code: `src/lib/auth/` (service, session, password,
 - **Guards:** admins cannot remove their own user-management access or disable themselves, and locked roles cannot be edited.
 - **Audit log:** `src/lib/audit` writes `audit_logs` rows in the same transaction as the change (school registration and status, school profile, branches, users, roles, reset links) with secrets redacted. Server logs also scrub database query parameters.
 - **New users** receive a one-time setup link (valid 24 h) instead of a password, because email delivery is not configured.
-- **Navigation:** School Registrations is part of **School Profile** (`02-Product-Decisions.md`). Platform users see all registrations there; school users see their own registration and profile.
+- **Navigation:** the School Admin sees and opens every school tab; other users see only the tabs their roles allow. The platform admin sees **School Registrations** only (approve, suspend, add a school admin).
+- **School Profile** is the school letterhead (logo, manager name, phone, address, motto, website, official email) printed on report sheets and letters — see `src/components/print/letterhead.tsx`. Logos (PNG/JPEG/WebP, ≤ 1 MB, checked by file content) are stored privately in `school_logos` and served by `GET /api/school-logo` only to signed-in members of the school.

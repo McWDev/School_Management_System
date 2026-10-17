@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CalendarRange,
+  ClipboardCheck,
   ChartColumn,
   ClipboardList,
   GraduationCap,
@@ -173,8 +174,16 @@ export const navGroups: NavGroup[] = [
         title: "School Profile",
         href: "/settings/school-profile",
         icon: Landmark,
-        description: "School registration, name, logo and contact details.",
-        permission: ["settings.manage", "schools.read"],
+        description: "Logo, manager, contacts and motto printed on reports and letters.",
+        permission: "settings.manage",
+      },
+      {
+        title: "School Registrations",
+        href: "/settings/school-registrations",
+        icon: ClipboardCheck,
+        description: "Schools on the platform and their registration status.",
+        // Platform-only permission: school users never see this tab.
+        permission: "schools.read",
       },
       {
         title: "General Settings",

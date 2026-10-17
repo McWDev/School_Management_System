@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
-import { tenants, type Tenant } from "@/db/schema";
+import { schoolLogos, tenants, type Tenant } from "@/db/schema";
 import { ensureSchoolRoles } from "@/features/roles/presets";
 import { recordAudit } from "@/lib/audit";
 import {
@@ -22,11 +22,12 @@ import {
 import { parseInput } from "@/lib/validation";
 import { uuidSchema } from "@/lib/validation/fields";
 import {
-  schoolDetailsSchema,
   schoolListFilterSchema,
+  schoolProfileSchema,
   schoolRegistrationSchema,
   statusChangeSchema,
 } from "./schemas";
+import { checkLogo } from "./logo";
 import { resolveTenantTransition, type TenantStatusAction } from "./status";
 
 /*
@@ -196,11 +197,11 @@ export async function getOwnSchool(ctx: TenantContext): Promise<Tenant> {
   return tenant;
 }
 
-/** Update the school's own details. Status and school code are not editable here. */
-export async function updateOwnSchoolDetails(ctx: TenantContext, input: unknown): Promise<Tenant> {
+/** Update the school profile (letterhead). Status, code, currency and time zone are not editable here. */
+export async function updateSchoolProfile(ctx: TenantContext, input: unknown): Promise<Tenant> {
   assertPermission(ctx, "settings.manage");
   assertAllBranches(ctx);
-  const data = parseInput(schoolDetailsSchema, input);
+  const data = parseInput(schoolProfileSchema, input);
   return getDb().transaction(async (tx) => {
     const [before] = await tx
       .select()
@@ -217,14 +218,96 @@ export async function updateOwnSchoolDetails(ctx: TenantContext, input: unknown)
       {
         tenantId: ctx.tenantId,
         actorUserId: ctx.actorUserId,
-        action: "school.details_updated",
+        action: "school.profile_updated",
         entityType: "school",
         entityId: ctx.tenantId,
-        before,
-        after: updated,
+        before: pickProfile(before),
+        after: pickProfile(updated),
       },
       tx,
     );
     return updated;
   });
+}
+
+function pickProfile(t: Tenant) {
+  const { name, legalName, managerName, contactEmail, phone, website, address, motto } = t;
+  return { name, legalName, managerName, contactEmail, phone, website, address, motto };
+}
+
+// ------------------------------------------------------------------- logo
+
+/** Replace the school logo. Bytes are checked by content (PNG, JPEG or WebP, ≤ 1 MB). */
+export async function setSchoolLogo(ctx: TenantContext, bytes: Uint8Array): Promise<void> {
+  assertPermission(ctx, "settings.manage");
+  assertAllBranches(ctx);
+  const check = checkLogo(bytes);
+  if (!check.ok) throw new ValidationError(check.message, { logo: [check.message] });
+  const data = Buffer.from(bytes);
+  await getDb().transaction(async (tx) => {
+    await tx
+      .insert(schoolLogos)
+      .values({ tenantId: ctx.tenantId, contentType: check.type, byteSize: data.length, data })
+      .onConflictDoUpdate({
+        target: schoolLogos.tenantId,
+        set: { contentType: check.type, byteSize: data.length, data, updatedAt: new Date() },
+      });
+    await recordAudit(
+      {
+        tenantId: ctx.tenantId,
+        actorUserId: ctx.actorUserId,
+        action: "school.logo_updated",
+        entityType: "school",
+        entityId: ctx.tenantId,
+        after: { contentType: check.type, byteSize: data.length },
+      },
+      tx,
+    );
+  });
+}
+
+export async function removeSchoolLogo(ctx: TenantContext): Promise<void> {
+  assertPermission(ctx, "settings.manage");
+  assertAllBranches(ctx);
+  await getDb().transaction(async (tx) => {
+    const removed = await tx
+      .delete(schoolLogos)
+      .where(eq(schoolLogos.tenantId, ctx.tenantId))
+      .returning({ tenantId: schoolLogos.tenantId });
+    if (!removed.length) return;
+    await recordAudit(
+      {
+        tenantId: ctx.tenantId,
+        actorUserId: ctx.actorUserId,
+        action: "school.logo_removed",
+        entityType: "school",
+        entityId: ctx.tenantId,
+      },
+      tx,
+    );
+  });
+}
+
+/** When the logo last changed (for cache-busting), or null when there is none. */
+export async function getSchoolLogoVersion(ctx: TenantContext): Promise<number | null> {
+  const [row] = await getDb()
+    .select({ updatedAt: schoolLogos.updatedAt })
+    .from(schoolLogos)
+    .where(eq(schoolLogos.tenantId, ctx.tenantId));
+  return row ? row.updatedAt.getTime() : null;
+}
+
+/** The logo bytes of the actor's own school. Any member of the school may read it. */
+export async function getSchoolLogo(
+  ctx: TenantContext,
+): Promise<{ contentType: string; data: Buffer; updatedAt: Date } | null> {
+  const [row] = await getDb()
+    .select({
+      contentType: schoolLogos.contentType,
+      data: schoolLogos.data,
+      updatedAt: schoolLogos.updatedAt,
+    })
+    .from(schoolLogos)
+    .where(eq(schoolLogos.tenantId, ctx.tenantId));
+  return row ?? null;
 }

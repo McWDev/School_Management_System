@@ -9,7 +9,7 @@ import { Dialog, DialogClose, DialogContent, DialogTrigger } from "@/components/
 import { Input } from "@/components/ui/input";
 import { IDLE, type FormResult } from "@/lib/form-result";
 import type { SchoolLinkResult } from "../actions";
-import { SchoolDetailFields } from "./school-fields";
+import { SchoolRegistrationFields } from "./school-fields";
 
 type Action = (
   prev: FormResult<unknown>,
@@ -76,7 +76,7 @@ function RegisterSchoolForm({ action, onDone }: { action: Action; onDone: () => 
       >
         {(props) => <Input {...props} name="schoolCode" maxLength={20} className="uppercase" />}
       </FormField>
-      <SchoolDetailFields idPrefix="register" errors={errors} />
+      <SchoolRegistrationFields errors={errors} />
       <fieldset className="flex flex-col gap-3 rounded-md border p-3">
         <legend className="px-1 text-sm font-medium">First School Admin (optional)</legend>
         <div className="grid gap-4 sm:grid-cols-2">

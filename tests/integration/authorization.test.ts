@@ -180,7 +180,7 @@ describe.skipIf(!hasDatabase)("authorization", () => {
       ).rejects.toBeInstanceOf(errors.ForbiddenError);
       await expect(userRepo.listSchoolUsers(ctx)).rejects.toBeInstanceOf(errors.ForbiddenError);
       await expect(roleRepo.listRoles(ctx)).rejects.toBeInstanceOf(errors.ForbiddenError);
-      await expect(tenantRepo.updateOwnSchoolDetails(ctx, {})).rejects.toBeInstanceOf(
+      await expect(tenantRepo.updateSchoolProfile(ctx, {})).rejects.toBeInstanceOf(
         errors.ForbiddenError,
       );
       // Pickers still show only the teacher's own branch.
@@ -444,6 +444,54 @@ describe.skipIf(!hasDatabase)("authorization", () => {
         beforeData: { status: "active" },
         afterData: { status: "suspended" },
       });
+    });
+  });
+
+  describe("school profile and logo", () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
+
+    it("lets the School Admin set the letterhead, audited", async () => {
+      const updated = await tenantRepo.updateSchoolProfile(adminA.tenant!, {
+        name: "Authz A School",
+        managerName: "Head A",
+        motto: "Learn",
+        website: "a.example",
+        contactEmail: "office@a.example",
+      });
+      expect(updated).toMatchObject({ managerName: "Head A", website: "https://a.example" });
+      const [entry] = await getDb()
+        .select()
+        .from(auditLogs)
+        .where(
+          and(eq(auditLogs.entityId, schoolA), eq(auditLogs.action, "school.profile_updated")),
+        );
+      expect(entry.afterData).toMatchObject({ managerName: "Head A", motto: "Learn" });
+    });
+
+    it("keeps each school's logo private to that school", async () => {
+      await tenantRepo.setSchoolLogo(adminA.tenant!, png);
+      const own = await tenantRepo.getSchoolLogo(adminA.tenant!);
+      expect(own?.contentType).toBe("image/png");
+      expect([...own!.data]).toEqual([...png]);
+      expect(await tenantRepo.getSchoolLogo(adminB.tenant!)).toBeNull();
+      await tenantRepo.removeSchoolLogo(adminA.tenant!);
+      expect(await tenantRepo.getSchoolLogo(adminA.tenant!)).toBeNull();
+    });
+
+    it("rejects files that are not PNG, JPEG or WebP", async () => {
+      await expect(
+        tenantRepo.setSchoolLogo(adminA.tenant!, new TextEncoder().encode("<svg onload=x>")),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
+    });
+
+    it("refuses users without settings.manage", async () => {
+      const teacher = await accessFor((await makeUser("logoteach", "teacher", [mainA])).id);
+      await expect(tenantRepo.setSchoolLogo(teacher.tenant!, png)).rejects.toBeInstanceOf(
+        errors.ForbiddenError,
+      );
+      await expect(
+        tenantRepo.updateSchoolProfile(teacher.tenant!, { name: "Hacked" }),
+      ).rejects.toBeInstanceOf(errors.ForbiddenError);
     });
   });
 });

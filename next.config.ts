@@ -18,17 +18,13 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Native Argon2 binding: load it from node_modules at runtime, don't bundle it.
   serverExternalPackages: ["@node-rs/argon2"],
+  experimental: {
+    // School logos are up to 1 MB; allow room for the rest of the form.
+    serverActions: { bodySizeLimit: "2mb" },
+  },
   async redirects() {
     // The proxy sends signed-out visitors on to /login.
-    return [
-      { source: "/", destination: "/dashboard", permanent: false },
-      // School registrations live on the School Profile page (02-Product-Decisions.md).
-      {
-        source: "/settings/school-registrations",
-        destination: "/settings/school-profile",
-        permanent: true,
-      },
-    ];
+    return [{ source: "/", destination: "/dashboard", permanent: false }];
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

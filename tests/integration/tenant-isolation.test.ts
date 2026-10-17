@@ -112,7 +112,7 @@ describe.skipIf(!hasDatabase)("tenant and branch isolation", () => {
 
     it("reads and edits only its own school profile, never its status", async () => {
       expect((await tenantRepo.getOwnSchool(adminA)).id).toBe(schoolA.id);
-      const updated = await tenantRepo.updateOwnSchoolDetails(adminA, {
+      const updated = await tenantRepo.updateSchoolProfile(adminA, {
         ...school("A"),
         name: `Renamed A ${run}`,
         status: "suspended",
@@ -167,7 +167,7 @@ describe.skipIf(!hasDatabase)("tenant and branch isolation", () => {
 
     it("cannot update the school profile", async () => {
       await expect(
-        tenantRepo.updateOwnSchoolDetails(branchAdminA1, school("A")),
+        tenantRepo.updateSchoolProfile(branchAdminA1, school("A")),
       ).rejects.toBeInstanceOf(errors.ForbiddenError);
     });
   });

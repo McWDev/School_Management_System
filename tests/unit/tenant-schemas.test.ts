@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { branchInputSchema } from "@/features/branches/schemas";
-import { schoolDetailsSchema, schoolRegistrationSchema } from "@/features/tenants/schemas";
+import { checkLogo, LOGO_MAX_BYTES } from "@/features/tenants/logo";
+import { schoolProfileSchema, schoolRegistrationSchema } from "@/features/tenants/schemas";
 import { ValidationError } from "@/lib/errors";
 import { escapeLike, paginationSchema } from "@/lib/pagination";
 import { parseInput } from "@/lib/validation";
@@ -46,7 +47,7 @@ describe("school registration schema", () => {
   });
 
   it("never accepts status or tenant fields from input", () => {
-    const parsed = schoolDetailsSchema.parse({ ...validSchool, status: "active", id: "x" });
+    const parsed = schoolProfileSchema.parse({ ...validSchool, status: "active", id: "x" });
     expect(parsed).not.toHaveProperty("status");
     expect(parsed).not.toHaveProperty("id");
   });
@@ -87,5 +88,51 @@ describe("pagination helpers", () => {
 
   it("escapes LIKE wildcards", () => {
     expect(escapeLike("50%_off\\")).toBe("50\\%\\_off\\\\");
+  });
+});
+
+describe("school profile (letterhead)", () => {
+  it("normalizes the website and keeps the letterhead fields", () => {
+    const parsed = schoolProfileSchema.parse({
+      name: "Hodan School",
+      managerName: "  Amina Ali ",
+      website: "hodan.so",
+      motto: "Knowledge is light",
+      contactEmail: "Info@Hodan.so",
+    });
+    expect(parsed).toMatchObject({
+      managerName: "Amina Ali",
+      website: "https://hodan.so",
+      motto: "Knowledge is light",
+      contactEmail: "info@hodan.so",
+    });
+  });
+
+  it.each(["javascript:alert(1)", "ftp://files.example", "not a site"])(
+    "rejects website %j",
+    (website) => {
+      expect(schoolProfileSchema.safeParse({ name: "Hodan", website }).success).toBe(false);
+    },
+  );
+});
+
+describe("logo checks", () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0]);
+  const webp = new TextEncoder().encode("RIFF\0\0\0\0WEBPVP8 ");
+  const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>');
+
+  it("detects real PNG, JPEG and WebP bytes", () => {
+    expect(checkLogo(png)).toEqual({ ok: true, type: "image/png" });
+    expect(checkLogo(jpeg)).toEqual({ ok: true, type: "image/jpeg" });
+    expect(checkLogo(webp)).toEqual({ ok: true, type: "image/webp" });
+  });
+
+  it("rejects SVG, empty and oversized files", () => {
+    expect(checkLogo(svg).ok).toBe(false);
+    expect(checkLogo(new Uint8Array()).ok).toBe(false);
+    const big = new Uint8Array(LOGO_MAX_BYTES + 1);
+    big.set(png);
+    expect(checkLogo(big)).toEqual({ ok: false, message: "The logo must be 1 MB or smaller." });
   });
 });

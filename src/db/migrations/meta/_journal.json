@@ -36,6 +36,20 @@
       "when": 1792243973839,
       "tag": "0004_seed_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792252529451,
+      "tag": "0005_school_profile_letterhead",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792252532087,
+      "tag": "0006_drop_tenant_logo_url",
+      "breakpoints": true
     }
   ]
 }

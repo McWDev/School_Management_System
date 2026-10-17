@@ -26,6 +26,7 @@ describe("navigation config", () => {
       "Users",
       "Roles & Permissions",
       "School Profile",
+      "School Registrations",
       "General Settings",
     ]);
   });
@@ -39,12 +40,16 @@ describe("navigation config", () => {
     }
   });
 
-  it("combines School Registrations into School Profile", () => {
-    expect(allNavItems.some((i) => i.title === "School Registrations")).toBe(false);
+  it("shows School Registrations to platform users only and School Profile to school admins", () => {
     const profile = allNavItems.find((i) => i.title === "School Profile")!;
-    expect(isNavItemVisible(profile, new Set(["schools.read"]))).toBe(true);
+    const registrations = allNavItems.find((i) => i.title === "School Registrations")!;
     expect(isNavItemVisible(profile, new Set(["settings.manage"]))).toBe(true);
-    expect(isNavItemVisible(profile, new Set(["students.read"]))).toBe(false);
+    expect(isNavItemVisible(profile, new Set(["schools.read"]))).toBe(false);
+    expect(isNavItemVisible(registrations, new Set(["schools.read"]))).toBe(true);
+    // A School Admin holds every school permission but never schools.read.
+    expect(isNavItemVisible(registrations, new Set(["settings.manage", "users.manage"]))).toBe(
+      false,
+    );
   });
 
   it("resolves the most specific active item", () => {
