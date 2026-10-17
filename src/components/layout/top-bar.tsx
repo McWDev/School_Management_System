@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, CircleHelp, CircleUserRound } from "lucide-react";
+import { Bell } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,15 @@ import { MobileNav } from "./mobile-nav";
 import { findActiveNavItem } from "./nav-config";
 
 const menuContentClasses = "z-50 min-w-56 rounded-md border bg-surface p-1 text-sm shadow-lg";
-const menuItemClasses =
-  "flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-muted";
 
-export function TopBar({ permissions }: { permissions?: readonly string[] }) {
+export function TopBar({
+  permissions,
+  account,
+}: {
+  permissions?: readonly string[];
+  /** Account menu, rendered by the server after the session is read. */
+  account?: React.ReactNode;
+}) {
   const pathname = usePathname();
   const current = findActiveNavItem(pathname);
 
@@ -41,28 +46,7 @@ export function TopBar({ permissions }: { permissions?: readonly string[] }) {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
 
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Account menu">
-              <CircleUserRound aria-hidden="true" />
-            </Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content align="end" sideOffset={6} className={menuContentClasses}>
-              <DropdownMenu.Label className="px-2 py-1.5">
-                <span className="block font-semibold">Not signed in</span>
-                <span className="block text-xs text-muted-foreground">
-                  Sign-in will be available soon.
-                </span>
-              </DropdownMenu.Label>
-              <DropdownMenu.Separator className="my-1 h-px bg-border" />
-              <DropdownMenu.Item className={menuItemClasses} disabled>
-                <CircleHelp className="size-4" aria-hidden="true" />
-                Help
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+        {account}
       </div>
     </header>
   );

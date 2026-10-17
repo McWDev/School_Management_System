@@ -103,3 +103,27 @@ All tenant-owned data access goes through repositories in `src/features/*/reposi
 - Errors thrown from repositories (`src/lib/errors.ts`) carry user-safe messages; convert them with `toActionError()` in server actions.
 
 `tests/integration/tenant-isolation.test.ts` proves this with two schools and two branches.
+
+## Authentication (custom)
+No third-party auth provider. Code: `src/lib/auth/` (service, session, password, tokens, rate limits) and `src/features/auth/` (server actions, forms).
+
+- **Passwords:** Argon2id (19 MiB, t=2, p=1). Minimum 10 characters.
+- **Sessions:** random 256-bit token in an `HttpOnly`, `SameSite=Lax` cookie (`__Host-sms_session`, `Secure`, in production). The database stores only an HMAC of the token (keyed by `SESSION_SECRET`). Sessions end after **8 h idle** or **7 days** (configurable). Every request re-checks the session, the user's status and the school's status, so disabling a user or suspending a school takes effect immediately.
+- **Login:** one generic error for wrong email or password; unknown emails cost the same time. Specific messages (disabled account, pending/suspended school) appear only after a correct password. Login rotates the session.
+- **Abuse protection (Postgres-backed):** 5 failed logins per account per 15 min; 50 attempts per IP per 15 min (`AUTH_LOGIN_IP_LIMIT`); 10 reset attempts per IP per 15 min.
+- **CSRF:** state changes use Server Actions (POST-only, Origin checked by Next.js) plus `SameSite=Lax` cookies.
+- **Route protection:** `src/proxy.ts` redirects visitors without a cookie to `/login` (optimistic). The `(dashboard)` layout validates the session on the server, and every data function must call `requireUser()` (Data Access Layer).
+- **Password reset:** email delivery is **not configured**. An operator creates a single-use link (expires in 30 min), and using it revokes all of the user's sessions:
+  ```bash
+  npm run auth:reset-link -- user@example.com
+  ```
+  Share the link over a trusted channel. A user-management screen for this arrives with Task 06.
+
+### Demo accounts (development only)
+`npm run db:seed` creates these synthetic users with the password in `SEED_USER_PASSWORD` (`.env.local`):
+
+| Email | Account |
+|---|---|
+| `platform.admin@sms.example` | Platform-level user |
+| `admin@demo-hodan.example` | School admin, Hodan Demo School (active) |
+| `admin@demo-warta.example` | School admin, Warta Demo Academy (pending, so login is refused) |

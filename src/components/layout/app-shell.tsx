@@ -4,9 +4,12 @@ import { TopBar } from "./top-bar";
 /** Sidebar + top bar + main content. Used by the (dashboard) route group layout. */
 export function AppShell({
   permissions,
+  account,
   children,
 }: {
   permissions?: readonly string[];
+  /** Account menu slot for the top bar (streams in after the session is read). */
+  account?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -19,7 +22,7 @@ export function AppShell({
       </a>
       <AppSidebar permissions={permissions} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar permissions={permissions} />
+        <TopBar permissions={permissions} account={account} />
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-6">{children}</div>
         </main>

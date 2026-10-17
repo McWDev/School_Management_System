@@ -18,9 +18,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx --conditions=react-server src/db/seed.ts"
+    "db:seed": "tsx --conditions=react-server src/db/seed.ts",
+    "auth:reset-link": "tsx --conditions=react-server scripts/reset-link.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",
