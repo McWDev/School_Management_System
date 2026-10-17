@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Bell, CircleHelp, CircleUserRound } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "./mobile-nav";
 import { findActiveNavItem } from "./nav-config";
@@ -23,6 +24,7 @@ export function TopBar({ permissions }: { permissions?: readonly string[] }) {
       </p>
 
       <div className="ml-auto flex items-center gap-1">
+        <ThemeToggle />
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <Button variant="ghost" size="icon" aria-label="Notifications">
