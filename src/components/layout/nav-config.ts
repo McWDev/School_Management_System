@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   UserCog,
+  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -55,6 +56,13 @@ const moduleGroups: NavGroup[] = [
         icon: LayoutDashboard,
         description: "Overview of your school.",
         permission: null,
+      },
+      {
+        title: "School Staff",
+        href: "/staff",
+        icon: Users,
+        description: "Everyone who works at the school and their work type.",
+        permission: "staff.read",
       },
     ],
   },
@@ -203,11 +211,14 @@ const moduleGroups: NavGroup[] = [
 export const allNavItems: NavItem[] = moduleGroups.flatMap((group) => group.items);
 
 /**
- * Sidebar tabs. Per the product owner (2026-10-17), only Dashboard is shown
- * until they decide which tabs to add back.
+ * Sidebar tabs, added one at a time as the product owner asks (2026-10-17):
+ * Dashboard, then School Staff.
  */
 export const navGroups: NavGroup[] = [
-  { title: null, items: allNavItems.filter((item) => item.href === "/dashboard") },
+  {
+    title: null,
+    items: allNavItems.filter((item) => ["/dashboard", "/staff"].includes(item.href)),
+  },
 ];
 
 export function isNavItemVisible(item: NavItem, permissions: ReadonlySet<string>): boolean {

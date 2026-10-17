@@ -51,6 +51,8 @@ export async function deleteTestData(tenantIds: string[], platformUserIds: strin
   }
   if (userIds.length) await db.delete(schema.users).where(inArray(schema.users.id, userIds));
   if (tenantIds.length) {
+    await db.delete(schema.staff).where(inArray(schema.staff.tenantId, tenantIds));
+    await db.delete(schema.workTypes).where(inArray(schema.workTypes.tenantId, tenantIds));
     await db.delete(schema.roles).where(inArray(schema.roles.tenantId, tenantIds));
     await db.delete(schema.branches).where(inArray(schema.branches.tenantId, tenantIds));
     await db.delete(schema.tenants).where(inArray(schema.tenants.id, tenantIds));

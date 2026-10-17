@@ -13,14 +13,19 @@ test("dashboard shows no fabricated metrics", async ({ page }) => {
   await expect(page.getByText("No payments recorded yet")).toBeVisible();
 });
 
-test("the sidebar shows only the Dashboard tab", async ({ page, isMobile }) => {
+test("the sidebar shows Dashboard and School Staff to the school admin", async ({
+  page,
+  isMobile,
+}) => {
   await page.goto("/dashboard");
   if (isMobile) {
     await page.getByRole("button", { name: "Open navigation menu" }).click();
   }
   const nav = page.getByRole("navigation", { name: "Main navigation" });
-  await expect(nav.getByRole("link")).toHaveCount(1);
-  await expect(nav.getByRole("link", { name: "Dashboard" })).toBeVisible();
+  await expect(nav.getByRole("link")).toHaveCount(2);
+  await nav.getByRole("link", { name: "School Staff" }).click();
+  await expect(page).toHaveURL(/\/staff$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("School Staff");
 });
 
 test("unknown pages show a 404", async ({ page }) => {

@@ -60,6 +60,11 @@ describe("role presets", () => {
     expect(byKey.finance_officer.has("exams.enter_marks")).toBe(false);
     expect([...byKey.auditor].every((p) => p.endsWith(".read"))).toBe(true);
     expect(byKey.auditor.has("audit_logs.read")).toBe(true);
+    // School Staff is School Admin only (product owner, 2026-10-17).
+    expect(byKey.school_admin.has("staff.manage")).toBe(true);
+    for (const key of ["branch_admin", "teacher", "finance_officer", "registrar", "auditor"]) {
+      expect(byKey[key].has("staff.read")).toBe(false);
+    }
   });
 
   it("gives the platform super admin no access to school records", () => {

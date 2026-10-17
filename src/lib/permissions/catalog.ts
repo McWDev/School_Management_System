@@ -77,6 +77,12 @@ export const PERMISSIONS = {
   "teachers.create": { scope: "tenant", group: "Teachers", description: "Add teachers" },
   "teachers.update": { scope: "tenant", group: "Teachers", description: "Edit teachers" },
   "teachers.archive": { scope: "tenant", group: "Teachers", description: "Archive teachers" },
+  "staff.read": { scope: "tenant", group: "Staff", description: "View school staff" },
+  "staff.manage": {
+    scope: "tenant",
+    group: "Staff",
+    description: "Add and edit school staff and work types",
+  },
   "classes.read": { scope: "tenant", group: "Academic", description: "View classes" },
   "classes.manage": { scope: "tenant", group: "Academic", description: "Manage classes" },
   "courses.read": { scope: "tenant", group: "Academic", description: "View courses and subjects" },

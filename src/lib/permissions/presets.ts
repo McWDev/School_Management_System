@@ -15,7 +15,8 @@ export type RolePreset = {
   locked?: boolean;
 };
 
-const readOnly = TENANT_PERMISSIONS.filter((p) => p.endsWith(".read"));
+// Staff records are School Admin only (product owner, 2026-10-17).
+const readOnly = TENANT_PERMISSIONS.filter((p) => p.endsWith(".read") && p !== "staff.read");
 
 export const PLATFORM_PRESETS: RolePreset[] = [
   {
@@ -58,6 +59,9 @@ export const SCHOOL_PRESETS: RolePreset[] = [
           "users.manage",
           "roles.manage",
           "academic_years.manage",
+          // Staff records are school-wide: School Admin only (product owner, 2026-10-17).
+          "staff.read",
+          "staff.manage",
         ].includes(p),
     ),
   },

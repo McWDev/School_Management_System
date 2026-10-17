@@ -3,6 +3,7 @@ import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
 import { schoolLogos, tenants, type Tenant } from "@/db/schema";
 import { ensureSchoolRoles } from "@/features/roles/presets";
+import { ensureStarterWorkTypes } from "@/features/staff/work-types";
 import { recordAudit } from "@/lib/audit";
 import {
   ConflictError,
@@ -77,6 +78,7 @@ export async function registerSchool(ctx: PlatformContext, input: unknown): Prom
         .values({ ...data, status: "pending" })
         .returning();
       await ensureSchoolRoles(tenant.id, tx);
+      await ensureStarterWorkTypes(tenant.id, tx);
       await recordAudit(
         {
           tenantId: tenant.id,

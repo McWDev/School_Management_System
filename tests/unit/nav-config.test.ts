@@ -8,8 +8,18 @@ import {
 import { isPermission } from "@/lib/permissions/catalog";
 
 describe("navigation config", () => {
-  it("shows only the Dashboard tab in the sidebar", () => {
-    expect(navGroups.flatMap((g) => g.items.map((i) => i.title))).toEqual(["Dashboard"]);
+  it("shows Dashboard and School Staff in the sidebar", () => {
+    expect(navGroups.flatMap((g) => g.items.map((i) => i.title))).toEqual([
+      "Dashboard",
+      "School Staff",
+    ]);
+  });
+
+  it("shows School Staff only with staff.read", () => {
+    const titles = (perms: string[]) =>
+      filterNavGroups(navGroups, new Set(perms)).flatMap((g) => g.items.map((i) => i.title));
+    expect(titles(["staff.read"])).toEqual(["Dashboard", "School Staff"]);
+    expect(titles(["students.read"])).toEqual(["Dashboard"]);
   });
 
   it("shows Dashboard to every signed-in user", () => {

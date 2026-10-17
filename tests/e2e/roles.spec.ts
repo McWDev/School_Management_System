@@ -3,12 +3,13 @@ import { signInAs } from "./helpers";
 
 /*
  * Role-based access with the synthetic demo users from `npm run db:seed`.
- * The sidebar currently shows only Dashboard (product owner, 2026-10-17);
+ * The sidebar currently shows Dashboard and School Staff (product owner, 2026-10-17);
  * pages are opened by URL to prove the server still enforces access.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
 
 const SCHOOL_PAGES = [
+  "/staff",
   "/classes",
   "/students",
   "/teachers",
@@ -27,20 +28,20 @@ const SCHOOL_PAGES = [
   "/settings/general",
 ];
 
-async function expectOnlyDashboardTab(page: Page, isMobile: boolean) {
+async function expectTabs(page: Page, isMobile: boolean, tabs: string[]) {
   if (isMobile) await page.getByRole("button", { name: "Open navigation menu" }).click();
   const nav = page.getByRole("navigation", { name: "Main navigation" });
-  await expect(nav.getByRole("link")).toHaveCount(1);
-  await expect(nav.getByRole("link", { name: "Dashboard" })).toBeVisible();
+  await expect(nav.getByRole("link")).toHaveCount(tabs.length);
+  for (const tab of tabs) await expect(nav.getByRole("link", { name: tab })).toBeVisible();
   if (isMobile) await page.keyboard.press("Escape");
 }
 
-test("school admin sees only Dashboard in the sidebar but can open every school page", async ({
+test("school admin sees Dashboard and School Staff and can open every school page", async ({
   page,
   isMobile,
 }) => {
   await signInAs(page, "admin@demo-hodan.example");
-  await expectOnlyDashboardTab(page, isMobile);
+  await expectTabs(page, isMobile, ["Dashboard", "School Staff"]);
   for (const path of SCHOOL_PAGES) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -77,8 +78,9 @@ test("school admin sees users with their roles", async ({ page, isMobile }) => {
 
 test("teacher is refused admin pages on the server", async ({ page, isMobile }) => {
   await signInAs(page, "teacher@demo-hodan.example");
-  await expectOnlyDashboardTab(page, isMobile);
+  await expectTabs(page, isMobile, ["Dashboard"]);
   for (const path of [
+    "/staff",
     "/settings/users",
     "/settings/branches",
     "/settings/roles",
@@ -101,7 +103,7 @@ test("branch admin sees only their branch", async ({ page }) => {
 test("platform admin manages schools on School Registrations only", async ({ page, isMobile }) => {
   await signInAs(page, "platform.admin@sms.example");
   await expect(page.getByText("Platform administration").first()).toBeVisible();
-  await expectOnlyDashboardTab(page, isMobile);
+  await expectTabs(page, isMobile, ["Dashboard"]);
 
   await page.goto("/settings/school-registrations");
   await expect(page.getByRole("row", { name: /DEMO-HODAN/ })).toBeVisible();
