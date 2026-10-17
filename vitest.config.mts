@@ -15,5 +15,8 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/unit/**/*.test.{ts,tsx}", "tests/integration/**/*.test.{ts,tsx}"],
     exclude: ["tests/e2e/**", "node_modules/**"],
+    // Integration tests make several round trips to Neon; allow for network latency.
+    testTimeout: 30_000,
+    hookTimeout: 60_000,
   },
 });

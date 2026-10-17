@@ -8,6 +8,13 @@
       "when": 1792240014950,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792241147459,
+      "tag": "0001_tenants_and_branches",
+      "breakpoints": true
     }
   ]
 }

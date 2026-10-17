@@ -87,8 +87,19 @@ npm run db:migrate                     # apply migrations to development
 | `npm run db:migrate` | Apply pending migrations to the branch in `.env.local` |
 | `npm run db:check` | Check migration files are consistent |
 | `npm run db:studio` | Browse the database (development only) |
+| `npm run db:seed` | Load synthetic demo data (refuses to run on production; safe to re-run) |
 
 Production migrations follow `09-Deployment-and-Operations.md` §4: review, test on a branch, back up, then apply.
 
 ### Health check
 `GET /api/health` returns `200 {"status":"ok"}` or `503 {"status":"degraded"}`. It never exposes connection details.
+
+## Tenant and branch isolation
+All tenant-owned data access goes through repositories in `src/features/*/repository.ts`, which take a server-built context from `src/lib/tenant-context`:
+- **`TenantContext`** (`tenantId` + branch scope `all` or a list of branch ids) — every query is filtered with `tenantFilter()` and, for branch-scoped users, `branchFilter()`. Records in another school or outside the branch scope behave as **not found**.
+- **`PlatformContext`** — only for platform operations such as school registration and status changes.
+- Contexts are built on the server (from the session, from Task 05). Never build one from IDs sent by the browser.
+- Ids from the client are validated with `requireActiveBranch()` / `getBranch()` before being used in another record.
+- Errors thrown from repositories (`src/lib/errors.ts`) carry user-safe messages; convert them with `toActionError()` in server actions.
+
+`tests/integration/tenant-isolation.test.ts` proves this with two schools and two branches.

@@ -1,22 +1,13 @@
 // @vitest-environment node
 import { afterAll, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
+import { hasDatabase } from "./helpers";
 
 /*
  * Runs against the real development database (Neon "development" branch).
  * Requires DATABASE_URL in .env.local (`neon checkout development`) or the
  * environment, and migrations applied (`npm run db:migrate`).
  */
-try {
-  process.loadEnvFile(".env.local");
-} catch {
-  // No .env.local; rely on the process environment.
-}
-
-const hasDatabase = Boolean(process.env.DATABASE_URL);
-if (!hasDatabase) {
-  console.warn("DATABASE_URL not set: skipping database integration tests.");
-}
 
 describe.skipIf(!hasDatabase)("database (Neon development branch)", () => {
   afterAll(async () => {

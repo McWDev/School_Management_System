@@ -18,6 +18,11 @@ export type Database = NodePgDatabase<typeof schema>;
 const globalForDb = globalThis as unknown as { __smsPool?: Pool; __smsDb?: Database };
 
 export function getPool(): Pool {
+  // Recreate after pool.end() (e.g. between test files sharing a process).
+  if (globalForDb.__smsPool?.ended) {
+    globalForDb.__smsPool = undefined;
+    globalForDb.__smsDb = undefined;
+  }
   globalForDb.__smsPool ??= new Pool({
     connectionString: withVerifiedSsl(getServerEnv().DATABASE_URL),
     max: 10,
