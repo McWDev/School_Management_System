@@ -21,7 +21,10 @@ export async function signIn(page: Page, email: string, password = demoPassword(
 
 export async function expectOnDashboard(page: Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dashboard");
+  // The dashboard greets the user ("Good morning, …").
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    /^Good (morning|afternoon|evening), /,
+  );
 }
 
 /** Sign in and wait until the app has landed on the dashboard. */

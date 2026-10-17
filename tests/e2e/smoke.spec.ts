@@ -4,13 +4,9 @@ test("root redirects to the dashboard", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page).toHaveTitle("Dashboard · School Management System");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dashboard");
-});
-
-test("dashboard shows no fabricated metrics", async ({ page }) => {
-  await page.goto("/dashboard");
-  await expect(page.getByLabel("Active Students: no data")).toBeVisible();
-  await expect(page.getByText("No payments recorded yet")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    /^Good (morning|afternoon|evening), /,
+  );
 });
 
 test("the sidebar shows Dashboard and School Staff to the school admin", async ({

@@ -2,6 +2,7 @@ import "server-only";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { getServerEnv } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { withVerifiedSsl } from "./connection-url";
 import * as schema from "./schema";
 
@@ -23,14 +24,22 @@ export function getPool(): Pool {
     globalForDb.__smsPool = undefined;
     globalForDb.__smsDb = undefined;
   }
-  globalForDb.__smsPool ??= new Pool({
-    connectionString: withVerifiedSsl(getServerEnv().DATABASE_URL),
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    // Neon computes scale to zero; the first connection after idle (cold start)
-    // can take several seconds, longer on slow networks.
-    connectionTimeoutMillis: 30_000,
-  });
+  if (!globalForDb.__smsPool) {
+    const pool = new Pool({
+      connectionString: withVerifiedSsl(getServerEnv().DATABASE_URL),
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      // Neon computes scale to zero; the first connection after idle (cold start)
+      // can take several seconds, longer on slow networks.
+      connectionTimeoutMillis: 30_000,
+      // Keep idle sockets alive so networks/NATs don't silently drop them
+      // (seen as "read ECONNRESET" on the next query).
+      keepAlive: true,
+    });
+    // A dropped idle connection must not crash the process; the pool replaces it.
+    pool.on("error", (error) => logger.warn("db.idle_connection_error", { error }));
+    globalForDb.__smsPool = pool;
+  }
   return globalForDb.__smsPool;
 }
 

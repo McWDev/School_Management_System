@@ -9,6 +9,8 @@ import { signInAs } from "./helpers";
  */
 test.use({ storageState: { cookies: [], origins: [] } });
 
+const createdCodes: string[] = [];
+
 // Test-only cleanup of branches created by these tests (the app archives, never deletes).
 test.afterAll(async () => {
   if (!process.env.DATABASE_URL) return;
@@ -17,7 +19,10 @@ test.afterAll(async () => {
   const client = new pg.Client({ connectionString: url.toString() });
   await client.connect();
   try {
-    await client.query("delete from branches where name like $1", ["E2E Campus E2E%"]);
+    // Only this run’s branches: the desktop and mobile runs execute in parallel.
+    if (createdCodes.length) {
+      await client.query("delete from branches where branch_code = any($1)", [createdCodes]);
+    }
   } finally {
     await client.end();
   }
@@ -67,7 +72,8 @@ test("school admin sees Dashboard and School Staff and can open every school pag
 test("school admin can create and archive a branch", async ({ page }) => {
   await signInAs(page, "admin@demo-hodan.example");
   await page.goto("/settings/branches");
-  const code = `E2E${Date.now().toString(36).slice(-5).toUpperCase()}`;
+  const code = `E2E${Date.now().toString(36).slice(-5).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
+  createdCodes.push(code);
   await page.getByRole("button", { name: "Add branch" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Code").fill(code);

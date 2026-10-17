@@ -40,6 +40,10 @@
   --sidebar-active-foreground: var(--primary);
 
   --shadow-card: 0 1px 2px 0 oklch(0.21 0.02 257 / 0.05);
+
+  /* Chart categories (validated: dataviz palette slots 1–2, light surface). */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
 }
 
 /*
@@ -76,6 +80,10 @@
   --sidebar-foreground: oklch(0.82 0.01 257);
   --sidebar-active: var(--primary-soft);
   --sidebar-active-foreground: oklch(0.88 0.08 262);
+
+  /* Chart categories, stepped for the dark surface (validated). */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
 }
 
 @theme inline {
@@ -111,6 +119,9 @@
   --radius-lg: calc(var(--radius) + 4px);
 
   --shadow-card: var(--shadow-card);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
 }
 
 @layer base {
