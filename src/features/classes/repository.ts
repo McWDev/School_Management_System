@@ -3,11 +3,18 @@ import { and, count, eq, ilike, sql, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
 import { classes, type SchoolClass } from "@/db/schema";
 import { recordAudit } from "@/lib/audit";
-import { ConflictError, isUniqueViolation, NotFoundError } from "@/lib/errors";
+import {
+  ConflictError,
+  InvalidStateError,
+  isUniqueViolation,
+  NotFoundError,
+  ValidationError,
+} from "@/lib/errors";
 import { escapeLike, paginationSchema, toOffset, toPage, type Page } from "@/lib/pagination";
 import { assertAllBranches, assertPermission, type TenantContext } from "@/lib/tenant-context";
 import { parseInput } from "@/lib/validation";
 import { uuidSchema } from "@/lib/validation/fields";
+import { countEnrollments, mostActiveInClass } from "@/features/students/repository";
 import { classInputSchema, classListFilterSchema } from "./schemas";
 
 /*
@@ -112,6 +119,14 @@ export async function updateClass(
         .where(and(eq(classes.tenantId, ctx.tenantId), eq(classes.id, id)))
         .for("update");
       if (!before) throw new NotFoundError();
+      const active = await mostActiveInClass(tx, ctx.tenantId, id);
+      if (data.seats < active) {
+        throw new ValidationError(undefined, {
+          seats: [
+            `${before.name} has ${active} Active students. Seats cannot be fewer than ${active}.`,
+          ],
+        });
+      }
       const [updated] = await tx
         .update(classes)
         .set(data)
@@ -137,11 +152,20 @@ export async function updateClass(
   }
 }
 
-/** Permanently delete a class (confirmed in the UI). The audit log keeps a copy. */
+/**
+ * Permanently delete a class that has no students (confirmed in the UI). The
+ * audit log keeps a copy.
+ */
 export async function deleteClass(ctx: TenantContext, classId: string): Promise<void> {
   assertCanManage(ctx);
   const id = parseId(classId);
   await getDb().transaction(async (tx) => {
+    const placed = await countEnrollments(tx, ctx.tenantId, { classId: id });
+    if (placed > 0) {
+      throw new InvalidStateError(
+        `This class has ${placed} ${placed === 1 ? "student" : "students"}. Move them to another class first, or set the class to Inactive.`,
+      );
+    }
     const [removed] = await tx
       .delete(classes)
       .where(and(eq(classes.tenantId, ctx.tenantId), eq(classes.id, id)))

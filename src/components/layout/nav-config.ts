@@ -80,7 +80,7 @@ const moduleGroups: NavGroup[] = [
         title: "Students",
         href: "/students",
         icon: GraduationCap,
-        description: "Student profiles, admissions and enrollments.",
+        description: "Register students and manage their class, guardian and status.",
         permission: "students.read",
       },
       {
@@ -212,9 +212,9 @@ export const allNavItems: NavItem[] = moduleGroups.flatMap((group) => group.item
 
 /**
  * Sidebar tabs, added one at a time as the product owner asks (2026-10-17),
- * in this order: Dashboard, Classes, School Staff.
+ * in this order: Dashboard, Academic Year, Classes, Students, School Staff.
  */
-const SIDEBAR_HREFS = ["/dashboard", "/academic-years", "/classes", "/staff"];
+const SIDEBAR_HREFS = ["/dashboard", "/academic-years", "/classes", "/students", "/staff"];
 
 export const navGroups: NavGroup[] = [
   {

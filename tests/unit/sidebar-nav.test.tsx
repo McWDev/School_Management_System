@@ -8,7 +8,7 @@ describe("SidebarNav", () => {
   it("shows only permitted tabs and marks the current one", () => {
     render(<SidebarNav permissions={["students.read", "users.manage"]} />);
     const links = screen.getAllByRole("link");
-    expect(links.map((l) => l.textContent)).toEqual(["Dashboard"]);
+    expect(links.map((l) => l.textContent)).toEqual(["Dashboard", "Students"]);
     expect(links[0]).toHaveAttribute("aria-current", "page");
   });
 

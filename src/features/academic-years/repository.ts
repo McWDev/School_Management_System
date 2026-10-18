@@ -3,11 +3,12 @@ import { and, count, desc, eq, ilike, ne, sql, type SQL } from "drizzle-orm";
 import { getDb, type Database } from "@/db";
 import { academicYears, type AcademicYear } from "@/db/schema";
 import { recordAudit } from "@/lib/audit";
-import { ConflictError, isUniqueViolation, NotFoundError } from "@/lib/errors";
+import { ConflictError, InvalidStateError, isUniqueViolation, NotFoundError } from "@/lib/errors";
 import { escapeLike, paginationSchema, toOffset, toPage, type Page } from "@/lib/pagination";
 import { assertAllBranches, assertPermission, type TenantContext } from "@/lib/tenant-context";
 import { parseInput } from "@/lib/validation";
 import { uuidSchema } from "@/lib/validation/fields";
+import { countEnrollments } from "@/features/students/repository";
 import { academicYearInputSchema, academicYearListFilterSchema } from "./schemas";
 
 /*
@@ -203,11 +204,20 @@ export async function makeAcademicYearCurrent(
   return updateAcademicYear(ctx, id, { name: year.name, status: "current" });
 }
 
-/** Permanently delete an academic year (confirmed in the UI). The audit log keeps a copy. */
+/**
+ * Permanently delete an academic year without students (confirmed in the UI).
+ * The audit log keeps a copy.
+ */
 export async function deleteAcademicYear(ctx: TenantContext, yearId: string): Promise<void> {
   assertCanManage(ctx);
   const id = parseId(yearId);
   await getDb().transaction(async (tx) => {
+    const placed = await countEnrollments(tx, ctx.tenantId, { academicYearId: id });
+    if (placed > 0) {
+      throw new InvalidStateError(
+        `This academic year has ${placed} ${placed === 1 ? "student" : "students"}. Set it to Closed instead.`,
+      );
+    }
     const [removed] = await tx
       .delete(academicYears)
       .where(and(eq(academicYears.tenantId, ctx.tenantId), eq(academicYears.id, id)))

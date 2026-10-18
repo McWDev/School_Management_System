@@ -99,6 +99,27 @@
       "when": 1792265372207,
       "tag": "0013_academic_years",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792317354061,
+      "tag": "0014_students",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792323518019,
+      "tag": "0015_student_fees",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792323859737,
+      "tag": "0016_student_fee_amount",
+      "breakpoints": true
     }
   ]
 }
