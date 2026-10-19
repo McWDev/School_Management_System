@@ -134,6 +134,27 @@
       "when": 1792327247537,
       "tag": "0018_fee_types",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792417468777,
+      "tag": "0019_subjects",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792417961274,
+      "tag": "0020_subject_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792418524022,
+      "tag": "0021_subject_teacher",
+      "breakpoints": true
     }
   ]
 }

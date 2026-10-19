@@ -9,7 +9,7 @@ test("root redirects to the dashboard", async ({ page }) => {
   );
 });
 
-test("the sidebar shows Dashboard, Academic Year, Classes, Students, Student Fees and School Staff to the school admin", async ({
+test("the sidebar shows Dashboard, Academic Year, Classes, Subjects, Students, Student Fees and School Staff to the school admin", async ({
   page,
   isMobile,
 }) => {
@@ -22,6 +22,7 @@ test("the sidebar shows Dashboard, Academic Year, Classes, Students, Student Fee
     "Dashboard",
     "Academic Year",
     "Classes",
+    "Subjects",
     "Students",
     "Student Fees",
     "School Staff",

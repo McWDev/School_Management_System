@@ -11,3 +11,4 @@ export * from "./classes";
 export * from "./academic-years";
 export * from "./students";
 export * from "./fees";
+export * from "./subjects";

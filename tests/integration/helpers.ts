@@ -70,6 +70,10 @@ export async function deleteTestData(tenantIds: string[], platformUserIds: strin
       .where(inArray(schema.studentNumberCounters.tenantId, tenantIds));
     await db.delete(schema.classes).where(inArray(schema.classes.tenantId, tenantIds));
     await db.delete(schema.academicYears).where(inArray(schema.academicYears.tenantId, tenantIds));
+    await db.delete(schema.subjects).where(inArray(schema.subjects.tenantId, tenantIds));
+    await db
+      .delete(schema.subjectNumberCounters)
+      .where(inArray(schema.subjectNumberCounters.tenantId, tenantIds));
   }
   if (userIds.length) await db.delete(schema.users).where(inArray(schema.users.id, userIds));
   if (tenantIds.length) {

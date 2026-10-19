@@ -37,7 +37,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  if (!process.env.DATABASE_URL) return;
+  // Only the run that changed years restores them (desktop and mobile run in parallel).
+  if (!process.env.DATABASE_URL || !created.length) return;
   await withClient(async (client) => {
     if (created.length) {
       await client.query("delete from academic_years where name = any($1)", [created]);

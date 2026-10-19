@@ -1,7 +1,6 @@
-import { ModulePlaceholder, placeholderMetadata } from "@/components/layout/module-placeholder";
+import { redirect } from "next/navigation";
 
-export const metadata = placeholderMetadata("/courses");
-
-export default function Page() {
-  return <ModulePlaceholder href="/courses" />;
+/** Courses / Subjects became the Subjects tab (2026-10-19). */
+export default function CoursesPage() {
+  redirect("/subjects");
 }

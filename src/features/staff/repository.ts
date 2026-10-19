@@ -5,6 +5,7 @@ import {
   sessions,
   staff,
   staffPhotos,
+  subjects,
   users,
   workTypes,
   type Staff,
@@ -532,6 +533,11 @@ export async function deleteStaff(ctx: TenantContext, staffId: string): Promise<
       throw new InvalidStateError("You cannot delete the staff record of your own login.");
     }
 
+    // Subjects they teach are left without a teacher.
+    await tx
+      .update(subjects)
+      .set({ teacherStaffId: null })
+      .where(and(eq(subjects.tenantId, ctx.tenantId), eq(subjects.teacherStaffId, id)));
     // The photo goes with the record (foreign key cascade).
     await tx.delete(staff).where(and(eq(staff.tenantId, ctx.tenantId), eq(staff.id, id)));
     if (member.userId) {
