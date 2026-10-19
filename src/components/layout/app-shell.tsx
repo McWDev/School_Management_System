@@ -23,9 +23,13 @@ export function AppShell({
       >
         Skip to main content
       </a>
-      <AppSidebar permissions={permissions} />
+      <div className="no-print contents">
+        <AppSidebar permissions={permissions} />
+      </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar permissions={permissions} account={account} contextLabel={contextLabel} />
+        <div className="no-print contents">
+          <TopBar permissions={permissions} account={account} contextLabel={contextLabel} />
+        </div>
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-6">{children}</div>
         </main>

@@ -9,7 +9,7 @@ test("root redirects to the dashboard", async ({ page }) => {
   );
 });
 
-test("the sidebar shows Dashboard, Academic Year, Classes, Students and School Staff to the school admin", async ({
+test("the sidebar shows Dashboard, Academic Year, Classes, Students, Student Fees and School Staff to the school admin", async ({
   page,
   isMobile,
 }) => {
@@ -23,6 +23,7 @@ test("the sidebar shows Dashboard, Academic Year, Classes, Students and School S
     "Academic Year",
     "Classes",
     "Students",
+    "Student Fees",
     "School Staff",
   ]);
   await nav.getByRole("link", { name: "School Staff" }).click();

@@ -19,7 +19,8 @@ export function KpiTile({
   href,
 }: {
   label: string;
-  value: number;
+  /** A count, or already formatted text such as an amount. */
+  value: number | string;
   hint?: string;
   icon: LucideIcon;
   tone?: keyof typeof TONES;
@@ -34,7 +35,9 @@ export function KpiTile({
       </span>
       <span className="flex min-w-0 flex-col">
         <span className="text-sm text-muted-foreground">{label}</span>
-        <span className="text-2xl font-semibold tabular-nums">{value.toLocaleString("en-GB")}</span>
+        <span className="text-2xl font-semibold tabular-nums">
+          {typeof value === "number" ? value.toLocaleString("en-GB") : value}
+        </span>
         {hint && <span className="truncate text-xs text-muted-foreground">{hint}</span>}
       </span>
     </>

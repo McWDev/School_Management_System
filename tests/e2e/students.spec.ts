@@ -47,7 +47,15 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (!process.env.DATABASE_URL) return;
   await withClient(async (client) => {
-    // Enrollments go with the students (cascade).
+    // Fee records first (they keep students from being deleted); enrollments cascade.
+    const mine = `(select id from students where tenant_id = ${DEMO} and full_name like $1)`;
+    const pattern = [`E2E ${run}%`];
+    await client.query(
+      `delete from fee_payment_allocations where payment_id in (select id from fee_payments where student_id in ${mine})`,
+      pattern,
+    );
+    await client.query(`delete from fee_payments where student_id in ${mine}`, pattern);
+    await client.query(`delete from fee_charges where student_id in ${mine}`, pattern);
     await client.query(`delete from students where tenant_id = ${DEMO} and full_name like $1`, [
       `E2E ${run}%`,
     ]);

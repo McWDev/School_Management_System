@@ -138,6 +138,7 @@ function StudentForm({
     initial?.fees ? stripZeros(initial.fees.registrationFee) : "",
   );
   const feeIsZero = !/[1-9]/.test(registrationFee);
+  const alreadyPaid = initial?.fees?.registrationFeePaid ?? false;
   const currency = options.currencyCode;
   const [preview, setPreview] = useState<string | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
@@ -497,16 +498,23 @@ function StudentForm({
             />
           )}
         </FormField>
-        <label className="flex items-center gap-2 self-center text-sm sm:mt-6">
-          <input
-            type="checkbox"
-            name="registrationFeePaid"
-            disabled={feeIsZero}
-            defaultChecked={initial?.fees?.registrationFeePaid ?? false}
-            className="size-4 accent-[var(--color-primary)]"
-          />
-          Registration fee is paid
-        </label>
+        <div className="flex flex-col gap-1 self-center sm:mt-6">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="registrationFeePaid"
+              disabled={feeIsZero || alreadyPaid}
+              defaultChecked={alreadyPaid}
+              className="size-4 accent-[var(--color-primary)]"
+            />
+            Registration fee is paid
+          </label>
+          <p className="text-xs text-muted-foreground">
+            {alreadyPaid
+              ? "Paid. To undo it, reverse the payment in Student Fees."
+              : "Ticking records a cash payment with a receipt."}
+          </p>
+        </div>
       </fieldset>
 
       <div className="flex justify-end gap-2">

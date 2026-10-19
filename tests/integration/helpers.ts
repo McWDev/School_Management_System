@@ -53,6 +53,16 @@ export async function deleteTestData(tenantIds: string[], platformUserIds: strin
     // Staff may point at login accounts, so they go before users.
     await db.delete(schema.staff).where(inArray(schema.staff.tenantId, tenantIds));
     await db.delete(schema.workTypes).where(inArray(schema.workTypes.tenantId, tenantIds));
+    // Fee records first: they keep students from being deleted.
+    await db
+      .delete(schema.feePaymentAllocations)
+      .where(inArray(schema.feePaymentAllocations.tenantId, tenantIds));
+    await db.delete(schema.feePayments).where(inArray(schema.feePayments.tenantId, tenantIds));
+    await db.delete(schema.feeCharges).where(inArray(schema.feeCharges.tenantId, tenantIds));
+    await db.delete(schema.feeTypes).where(inArray(schema.feeTypes.tenantId, tenantIds));
+    await db
+      .delete(schema.feeReceiptCounters)
+      .where(inArray(schema.feeReceiptCounters.tenantId, tenantIds));
     // Enrollments and photos go with the students (cascade).
     await db.delete(schema.students).where(inArray(schema.students.tenantId, tenantIds));
     await db

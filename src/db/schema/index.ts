@@ -10,3 +10,4 @@ export * from "./staff";
 export * from "./classes";
 export * from "./academic-years";
 export * from "./students";
+export * from "./fees";

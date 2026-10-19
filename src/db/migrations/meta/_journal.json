@@ -120,6 +120,20 @@
       "when": 1792323859737,
       "tag": "0016_student_fee_amount",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792325064690,
+      "tag": "0017_student_fee_collection",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792327247537,
+      "tag": "0018_fee_types",
+      "breakpoints": true
     }
   ]
 }

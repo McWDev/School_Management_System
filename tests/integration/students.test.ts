@@ -119,13 +119,13 @@ describe.skipIf(!hasDatabase)("students", () => {
       feeType: "partial_fee",
       feeAmount: "15.50",
       registrationFee: "1234.5",
-      registrationFeePaid: true,
+      registrationFeePaid: false,
     });
     expect(created).toMatchObject({
       feeType: "partial_fee",
       feeAmount: "15.50",
       registrationFee: "1234.50",
-      registrationFeePaid: true,
+      registrationFeePaid: false,
     });
     expect((await byName("Fee Partial")).fees).toMatchObject({ registrationFee: "1234.50" });
     const asViewer = (await studentRepo.listStudents(viewerA, { search: "Fee Partial" })).items[0];

@@ -15,6 +15,7 @@ import { recordAudit } from "@/lib/audit";
 import {
   ConflictError,
   ForbiddenError,
+  InvalidStateError,
   isUniqueViolation,
   NotFoundError,
   ValidationError,
@@ -24,6 +25,14 @@ import { escapeLike, paginationSchema, toOffset, toPage, type Page } from "@/lib
 import { assertAllBranches, assertPermission, can, type TenantContext } from "@/lib/tenant-context";
 import { parseInput } from "@/lib/validation";
 import { uuidSchema } from "@/lib/validation/fields";
+import {
+  deleteChargesOf,
+  hasPayments,
+  recordPaymentTx,
+  schoolToday,
+  syncRegistrationCharge,
+} from "@/features/fees/repository";
+import { latestEnrollment } from "./latest-enrollment";
 import {
   formatStudentNumber,
   studentInputSchema,
@@ -55,26 +64,6 @@ function assertCan(
 ) {
   assertPermission(ctx, permission);
   assertAllBranches(ctx);
-}
-
-/** The latest enrollment of each student (their current class and year). */
-function latestEnrollment() {
-  return getDb()
-    .select({
-      enrollmentId: studentEnrollments.id,
-      classId: studentEnrollments.classId,
-      academicYearId: studentEnrollments.academicYearId,
-    })
-    .from(studentEnrollments)
-    .where(
-      and(
-        eq(studentEnrollments.tenantId, students.tenantId),
-        eq(studentEnrollments.studentId, students.id),
-      ),
-    )
-    .orderBy(desc(studentEnrollments.createdAt))
-    .limit(1)
-    .as("latest");
 }
 
 type FeeColumns = "feeType" | "feeAmount" | "registrationFee" | "registrationFeePaid";
@@ -383,8 +372,43 @@ function studentFields(data: StudentInput) {
     feeType: data.feeType,
     feeAmount: data.feeAmount,
     registrationFee: data.registrationFee,
-    registrationFeePaid: data.registrationFeePaid,
+    // registration_fee_paid follows the registration charge (fees repository).
   };
+}
+
+/**
+ * Keep the registration charge in step with the student's registration fee
+ * and, when "paid" is ticked, record a payment for what is still owed.
+ */
+async function applyRegistrationFee(
+  tx: Transaction,
+  ctx: TenantContext,
+  student: { id: string; registrationFee: string; academicYearId: string },
+  paid: { requested: boolean; paymentDate: string; notes: string },
+) {
+  const open = await syncRegistrationCharge(tx, ctx, student);
+  if (!paid.requested || !open) return null;
+  if (!can(ctx, "fees.record_payment")) {
+    throw new ForbiddenError(
+      "You do not have permission to record payments. Untick “Registration fee is paid”.",
+    );
+  }
+  return recordPaymentTx(tx, ctx, {
+    studentId: student.id,
+    paymentDate: paid.paymentDate,
+    method: "cash",
+    reference: null,
+    notes: paid.notes,
+    lines: [{ chargeId: open.id, amount: open.remaining }],
+  });
+}
+
+async function reload(tx: Transaction, ctx: TenantContext, id: string) {
+  const [row] = await tx
+    .select()
+    .from(students)
+    .where(and(eq(students.tenantId, ctx.tenantId), eq(students.id, id)));
+  return row;
 }
 
 /**
@@ -438,6 +462,20 @@ export async function createStudent(
         academicYearId: data.academicYearId,
       });
       if (checkedPhoto) await savePhoto(tx, ctx.tenantId, created.id, checkedPhoto);
+      const payment = await applyRegistrationFee(
+        tx,
+        ctx,
+        {
+          id: created.id,
+          registrationFee: data.registrationFee,
+          academicYearId: data.academicYearId,
+        },
+        {
+          requested: data.registrationFeePaid,
+          paymentDate: data.admissionDate,
+          notes: "Registration fee paid at registration.",
+        },
+      );
       await recordAudit(
         {
           tenantId: ctx.tenantId,
@@ -445,11 +483,16 @@ export async function createStudent(
           action: "student.created",
           entityType: "student",
           entityId: created.id,
-          after: { ...created, ...placement, photo: Boolean(checkedPhoto) },
+          after: {
+            ...created,
+            ...placement,
+            photo: Boolean(checkedPhoto),
+            registrationReceipt: payment?.receiptNumber ?? null,
+          },
         },
         tx,
       );
-      return created;
+      return reload(tx, ctx, created.id);
     });
   } catch (error) {
     if (isUniqueViolation(error, "students_tenant_number_unique")) {
@@ -529,6 +572,16 @@ export async function updateStudent(
             ),
           );
       }
+      const payment = await applyRegistrationFee(
+        tx,
+        ctx,
+        { id, registrationFee: data.registrationFee, academicYearId: data.academicYearId },
+        {
+          requested: data.registrationFeePaid,
+          paymentDate: await schoolToday(tx, ctx.tenantId),
+          notes: "Registration fee marked paid on the student record.",
+        },
+      );
       if (checkedPhoto) {
         await savePhoto(tx, ctx.tenantId, id, checkedPhoto);
       } else if (options.removePhoto) {
@@ -554,11 +607,12 @@ export async function updateStudent(
             academicYearId: data.academicYearId,
             ...placement,
             photo: checkedPhoto ? "replaced" : options.removePhoto ? "removed" : "unchanged",
+            registrationReceipt: payment?.receiptNumber ?? null,
           },
         },
         tx,
       );
-      return updated;
+      return reload(tx, ctx, updated.id);
     });
   } catch (error) {
     if (isUniqueViolation(error, "student_enrollments_student_year_unique")) {
@@ -572,7 +626,8 @@ export async function updateStudent(
 
 /**
  * Permanently delete a student registered by mistake (confirmed in the UI),
- * with their enrollments and photo. The audit log keeps a copy. Students who
+ * with their enrollments, unpaid charges and photo. Not allowed once any fee
+ * payment was recorded. The audit log keeps a copy. Students who
  * finish or leave should get a status instead, so their history is kept.
  */
 export async function deleteStudent(ctx: TenantContext, studentId: string): Promise<void> {
@@ -588,6 +643,13 @@ export async function deleteStudent(ctx: TenantContext, studentId: string): Prom
       .where(
         and(eq(studentEnrollments.tenantId, ctx.tenantId), eq(studentEnrollments.studentId, id)),
       );
+    // Money history is kept: students with payments get a status instead.
+    if (await hasPayments(tx, ctx.tenantId, id)) {
+      throw new InvalidStateError(
+        "This student has fee payments on record and cannot be deleted. Change the status instead.",
+      );
+    }
+    await deleteChargesOf(tx, ctx.tenantId, id);
     // Enrollments and the photo go with the record (foreign key cascade).
     const [removed] = await tx
       .delete(students)

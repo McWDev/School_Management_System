@@ -8,12 +8,13 @@ import {
 import { isPermission } from "@/lib/permissions/catalog";
 
 describe("navigation config", () => {
-  it("shows Dashboard, Academic Year, Classes, Students and School Staff in that order", () => {
+  it("shows Dashboard, Academic Year, Classes, Students, Student Fees and School Staff in that order", () => {
     expect(navGroups.flatMap((g) => g.items.map((i) => i.title))).toEqual([
       "Dashboard",
       "Academic Year",
       "Classes",
       "Students",
+      "Student Fees",
       "School Staff",
     ]);
   });
@@ -30,6 +31,7 @@ describe("navigation config", () => {
     ]);
     expect(titles(["academic_years.read"])).toEqual(["Dashboard", "Academic Year"]);
     expect(titles(["students.read"])).toEqual(["Dashboard", "Students"]);
+    expect(titles(["fees.read"])).toEqual(["Dashboard", "Student Fees"]);
   });
 
   it("shows Dashboard to every signed-in user", () => {
@@ -49,7 +51,7 @@ describe("navigation config", () => {
 
   it("resolves the most specific page title", () => {
     expect(findActiveNavItem("/fees/payments")?.title).toBe("Payments");
-    expect(findActiveNavItem("/fees")?.title).toBe("School Fees");
+    expect(findActiveNavItem("/fees")?.title).toBe("Student Fees");
     expect(findActiveNavItem("/studentsx")).toBeUndefined();
   });
 });
