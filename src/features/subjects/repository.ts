@@ -2,8 +2,15 @@ import "server-only";
 import { and, count, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { getDb, type Database } from "@/db";
 import { staff, subjectNumberCounters, subjects, workTypes, type Subject } from "@/db/schema";
+import { hasMarks } from "@/features/exams/repository";
 import { recordAudit } from "@/lib/audit";
-import { ConflictError, isUniqueViolation, NotFoundError, ValidationError } from "@/lib/errors";
+import {
+  ConflictError,
+  InvalidStateError,
+  isUniqueViolation,
+  NotFoundError,
+  ValidationError,
+} from "@/lib/errors";
 import { escapeLike, paginationSchema, toOffset, toPage, type Page } from "@/lib/pagination";
 import { assertAllBranches, assertPermission, type TenantContext } from "@/lib/tenant-context";
 import { parseInput } from "@/lib/validation";
@@ -246,6 +253,11 @@ export async function deleteSubject(ctx: TenantContext, subjectId: string): Prom
   assertCanManage(ctx);
   const id = parseId(subjectId);
   await getDb().transaction(async (tx) => {
+    if (await hasMarks(tx, ctx.tenantId, { subjectId: id })) {
+      throw new InvalidStateError(
+        "This subject has exam marks and cannot be deleted. Set it to Inactive instead.",
+      );
+    }
     const [removed] = await tx
       .delete(subjects)
       .where(and(eq(subjects.tenantId, ctx.tenantId), eq(subjects.id, id)))

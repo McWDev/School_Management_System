@@ -155,6 +155,13 @@
       "when": 1792418524022,
       "tag": "0021_subject_teacher",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792424178546,
+      "tag": "0022_subject_marks",
+      "breakpoints": true
     }
   ]
 }

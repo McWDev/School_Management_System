@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, eq, ilike, sql, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
 import { classes, type SchoolClass } from "@/db/schema";
+import { hasMarks } from "@/features/exams/repository";
 import { recordAudit } from "@/lib/audit";
 import {
   ConflictError,
@@ -160,6 +161,11 @@ export async function deleteClass(ctx: TenantContext, classId: string): Promise<
   assertCanManage(ctx);
   const id = parseId(classId);
   await getDb().transaction(async (tx) => {
+    if (await hasMarks(tx, ctx.tenantId, { classId: id })) {
+      throw new InvalidStateError(
+        "This class has exam marks and cannot be deleted. Set it to Inactive instead.",
+      );
+    }
     const placed = await countEnrollments(tx, ctx.tenantId, { classId: id });
     if (placed > 0) {
       throw new InvalidStateError(

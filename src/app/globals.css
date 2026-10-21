@@ -143,4 +143,28 @@
   .no-print {
     display: none !important;
   }
+
+  /* Compact tables that fit the page: small text, tight cells, no clipping. */
+  .print-sheet {
+    font-size: 8.5pt;
+  }
+  .print-sheet .print-scroll {
+    overflow: visible !important;
+  }
+  .print-sheet table {
+    width: 100%;
+    table-layout: auto;
+  }
+  .print-sheet th,
+  .print-sheet td {
+    padding: 2px 4px !important;
+    font-size: 8.5pt;
+    line-height: 1.2;
+  }
+  .print-sheet tr {
+    break-inside: avoid;
+  }
+  .print-sheet thead {
+    display: table-header-group;
+  }
 }

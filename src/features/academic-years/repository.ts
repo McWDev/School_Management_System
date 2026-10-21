@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, desc, eq, ilike, ne, sql, type SQL } from "drizzle-orm";
 import { getDb, type Database } from "@/db";
 import { academicYears, type AcademicYear } from "@/db/schema";
+import { hasMarks } from "@/features/exams/repository";
 import { recordAudit } from "@/lib/audit";
 import { ConflictError, InvalidStateError, isUniqueViolation, NotFoundError } from "@/lib/errors";
 import { escapeLike, paginationSchema, toOffset, toPage, type Page } from "@/lib/pagination";
@@ -212,6 +213,9 @@ export async function deleteAcademicYear(ctx: TenantContext, yearId: string): Pr
   assertCanManage(ctx);
   const id = parseId(yearId);
   await getDb().transaction(async (tx) => {
+    if (await hasMarks(tx, ctx.tenantId, { academicYearId: id })) {
+      throw new InvalidStateError("This academic year has exam marks. Set it to Closed instead.");
+    }
     const placed = await countEnrollments(tx, ctx.tenantId, { academicYearId: id });
     if (placed > 0) {
       throw new InvalidStateError(

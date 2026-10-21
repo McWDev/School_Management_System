@@ -47,13 +47,15 @@ export async function getPlatformContextFor(
  * Converts errors into a safe ActionResult; unexpected errors are logged.
  */
 export async function tenantAction<T>(
-  permission: Permission,
+  permission: Permission | readonly Permission[],
   body: (ctx: TenantContext) => Promise<T>,
 ): Promise<ActionResult<T>> {
+  // A list means any one of the permissions is enough; the body checks the rest.
+  const allowed: readonly Permission[] = typeof permission === "string" ? [permission] : permission;
   return runAction(async () => {
     const access = await getAccess();
     const ctx = access?.tenant;
-    if (!ctx || !ctx.permissions.has(permission)) throw new ForbiddenError();
+    if (!ctx || !allowed.some((p) => ctx.permissions.has(p))) throw new ForbiddenError();
     return body(ctx);
   });
 }

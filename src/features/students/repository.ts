@@ -32,6 +32,7 @@ import {
   schoolToday,
   syncRegistrationCharge,
 } from "@/features/fees/repository";
+import { hasMarks } from "@/features/exams/repository";
 import { latestEnrollment } from "./latest-enrollment";
 import {
   formatStudentNumber,
@@ -644,6 +645,11 @@ export async function deleteStudent(ctx: TenantContext, studentId: string): Prom
         and(eq(studentEnrollments.tenantId, ctx.tenantId), eq(studentEnrollments.studentId, id)),
       );
     // Money history is kept: students with payments get a status instead.
+    if (await hasMarks(tx, ctx.tenantId, { studentId: id })) {
+      throw new InvalidStateError(
+        "This student has exam marks on record and cannot be deleted. Change the status instead.",
+      );
+    }
     if (await hasPayments(tx, ctx.tenantId, id)) {
       throw new InvalidStateError(
         "This student has fee payments on record and cannot be deleted. Change the status instead.",

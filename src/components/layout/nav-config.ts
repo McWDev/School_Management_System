@@ -98,10 +98,10 @@ const moduleGroups: NavGroup[] = [
         permission: "courses.read",
       },
       {
-        title: "Exams",
+        title: "Examinations",
         href: "/exams",
         icon: ClipboardList,
-        description: "Exam setup, marks entry and results.",
+        description: "Set up exams for your classes, enter marks and see results.",
         permission: "exams.read",
       },
       {
@@ -212,7 +212,7 @@ export const allNavItems: NavItem[] = moduleGroups.flatMap((group) => group.item
 
 /**
  * Sidebar tabs, added one at a time as the product owner asks (2026-10-17),
- * in this order: Dashboard, Academic Year, Classes, Subjects, Students, Student Fees,
+ * in this order: Dashboard, Academic Year, Classes, Subjects, Students, Examinations, Student Fees,
  * School Staff.
  */
 const SIDEBAR_HREFS = [
@@ -221,6 +221,7 @@ const SIDEBAR_HREFS = [
   "/classes",
   "/subjects",
   "/students",
+  "/exams",
   "/fees",
   "/staff",
 ];
