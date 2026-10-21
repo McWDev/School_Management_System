@@ -33,6 +33,8 @@ export type StaffValues = {
   address: string | null;
   location: string | null;
   hireDate: string | null;
+  /** Monthly salary, e.g. "300.00"; null when not on the payroll. */
+  salary: string | null;
   status: "active" | "inactive" | "left";
   /** Login username, when the staff member already has login access. */
   username: string | null;
@@ -41,6 +43,8 @@ export type StaffValues = {
 type Props = {
   mode: "create" | "edit";
   workTypes: { id: string; name: string }[];
+  /** The school's currency, e.g. "USD", for the salary field. */
+  currencyCode: string;
   initial?: StaffValues;
   /** Current photo URL (edit mode). */
   photoSrc?: string | null;
@@ -81,6 +85,7 @@ export function StaffFormDialog(props: Props) {
 function StaffForm({
   mode,
   workTypes,
+  currencyCode,
   initial,
   photoSrc,
   action,
@@ -236,6 +241,22 @@ function StaffForm({
               type="date"
               max={localToday()}
               defaultValue={initial?.hireDate ?? ""}
+            />
+          )}
+        </FormField>
+        <FormField
+          id={`${id}-salary`}
+          label={`Monthly salary (${currencyCode})`}
+          helperText="Optional. Staff with a salary appear on the monthly payroll."
+          error={errors.salary?.[0]}
+        >
+          {(p) => (
+            <Input
+              {...p}
+              name="salary"
+              inputMode="decimal"
+              placeholder="0.00"
+              defaultValue={initial?.salary ? initial.salary.replace(/\.00$/, "") : ""}
             />
           )}
         </FormField>

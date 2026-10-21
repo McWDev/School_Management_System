@@ -27,6 +27,7 @@ function staffInput(formData: FormData) {
     address: field(formData, "address"),
     location: field(formData, "location"),
     hireDate: field(formData, "hireDate"),
+    salary: field(formData, "salary"),
     status: field(formData, "status") || "active",
   };
 }

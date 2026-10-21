@@ -56,6 +56,16 @@ export async function deleteTestData(tenantIds: string[], platformUserIds: strin
     await db
       .delete(schema.subjectNumberCounters)
       .where(inArray(schema.subjectNumberCounters.tenantId, tenantIds));
+    // Salary records keep staff from being deleted.
+    await db
+      .delete(schema.salaryPayments)
+      .where(inArray(schema.salaryPayments.tenantId, tenantIds));
+    await db
+      .delete(schema.payrollEntries)
+      .where(inArray(schema.payrollEntries.tenantId, tenantIds));
+    await db
+      .delete(schema.payslipCounters)
+      .where(inArray(schema.payslipCounters.tenantId, tenantIds));
     // Staff may point at login accounts, so they go before users.
     await db.delete(schema.staff).where(inArray(schema.staff.tenantId, tenantIds));
     await db.delete(schema.workTypes).where(inArray(schema.workTypes.tenantId, tenantIds));

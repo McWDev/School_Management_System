@@ -11,6 +11,7 @@ import {
   type Staff,
   type WorkType,
 } from "@/db/schema";
+import { hasPayrollRecords } from "@/features/payroll/repository";
 import { hashPassword, newPasswordSchema } from "@/lib/auth/password";
 import { recordAudit } from "@/lib/audit";
 import {
@@ -531,6 +532,11 @@ export async function deleteStaff(ctx: TenantContext, staffId: string): Promise<
     if (!member) throw new NotFoundError();
     if (member.userId && member.userId === ctx.actorUserId) {
       throw new InvalidStateError("You cannot delete the staff record of your own login.");
+    }
+    if (await hasPayrollRecords(tx, ctx.tenantId, id)) {
+      throw new InvalidStateError(
+        `${member.fullName} has salary records and cannot be deleted. Set the status to Left instead.`,
+      );
     }
 
     // Subjects they teach are left without a teacher.

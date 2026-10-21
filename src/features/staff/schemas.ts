@@ -54,6 +54,17 @@ export const staffInputSchema = z
       "Hire date cannot be in the future.",
     ),
     status: z.enum(["active", "inactive", "left"]).default("active"),
+    /** Optional monthly salary (exact decimal text); "" means not on the payroll. */
+    salary: z
+      .string()
+      .trim()
+      .refine(
+        (value) => value === "" || /^\d{1,10}(\.\d{1,2})?$/.test(value),
+        "Enter an amount like 300 or 300.50.",
+      )
+      .refine((value) => value === "" || /[1-9]/.test(value), "The salary must be more than 0.")
+      .transform((value) => (value === "" ? null : value))
+      .nullish(),
   })
   .superRefine((value, ctx) => {
     if (value.hireDate < value.dateOfBirth) {

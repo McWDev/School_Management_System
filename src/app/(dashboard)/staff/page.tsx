@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Search, UserRound, Users } from "lucide-react";
+import Link from "next/link";
+import { Banknote, Search, UserRound, Users } from "lucide-react";
 import { Pagination } from "@/components/data-table/pagination";
 import { ConfirmAction } from "@/components/forms/confirm-action";
 import { NoAccess } from "@/components/layout/no-access";
@@ -29,7 +30,9 @@ import { StaffFormDialog } from "@/features/staff/components/staff-form-dialog";
 import { WorkTypesDialog } from "@/features/staff/components/work-types-dialog";
 import { listStaff, listWorkTypes } from "@/features/staff/repository";
 import { ageFrom } from "@/features/staff/schemas";
+import { getOwnSchool } from "@/features/tenants/repository";
 import { getTenantContextFor } from "@/lib/authz";
+import { formatMoney } from "@/lib/money";
 import { can, hasAllBranches } from "@/lib/tenant-context";
 
 export const metadata: Metadata = { title: "School Staff" };
@@ -56,10 +59,12 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
   const search = typeof params.search === "string" ? params.search : undefined;
   const status = typeof params.status === "string" ? params.status : undefined;
   const workTypeId = typeof params.workTypeId === "string" ? params.workTypeId : undefined;
-  const [page, workTypes] = await Promise.all([
+  const [page, workTypes, school] = await Promise.all([
     listStaff(ctx, { search, status, workTypeId }, { page: params.page }),
     listWorkTypes(ctx),
+    getOwnSchool(ctx),
   ]);
+  const currency = school.currencyCode;
   const canManage = can(ctx, "staff.manage") && hasAllBranches(ctx);
   const typeOptions = workTypes.map(({ id, name }) => ({ id, name }));
   const filtered = Boolean(search || status || workTypeId);
@@ -70,19 +75,32 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
         title="School Staff"
         description="Everyone who works at your school and their work type."
         actions={
-          canManage && (
-            <>
-              <WorkTypesDialog
-                create={createWorkTypeAction}
-                workTypes={workTypes.map((type) => ({
-                  ...type,
-                  rename: renameWorkTypeAction.bind(null, type.id),
-                  remove: deleteWorkTypeAction.bind(null, type.id),
-                }))}
-              />
-              <StaffFormDialog mode="create" workTypes={typeOptions} action={createStaffAction} />
-            </>
-          )
+          <>
+            <Button asChild variant="outline">
+              <Link href="/staff/salaries">
+                <Banknote className="size-4" aria-hidden="true" />
+                Salaries
+              </Link>
+            </Button>
+            {canManage && (
+              <>
+                <WorkTypesDialog
+                  create={createWorkTypeAction}
+                  workTypes={workTypes.map((type) => ({
+                    ...type,
+                    rename: renameWorkTypeAction.bind(null, type.id),
+                    remove: deleteWorkTypeAction.bind(null, type.id),
+                  }))}
+                />
+                <StaffFormDialog
+                  mode="create"
+                  workTypes={typeOptions}
+                  currencyCode={currency}
+                  action={createStaffAction}
+                />
+              </>
+            )}
+          </>
         }
       />
 
@@ -150,6 +168,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                 <TableHead className="hidden lg:table-cell">Gender / Age</TableHead>
                 <TableHead className="hidden lg:table-cell">Location</TableHead>
                 <TableHead className="hidden xl:table-cell">Hire date</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">Salary</TableHead>
                 <TableHead>Status</TableHead>
                 {canManage && (
                   <TableHead>
@@ -214,6 +233,9 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                     <TableCell className="hidden xl:table-cell">
                       {formatDate(member.hireDate)}
                     </TableCell>
+                    <TableCell className="hidden lg:table-cell text-right tabular-nums">
+                      {member.salary ? formatMoney(member.salary, currency) : "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge tone={STATUS_TONE[member.status]}>{STATUS_LABEL[member.status]}</Badge>
                     </TableCell>
@@ -223,6 +245,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                           <StaffFormDialog
                             mode="edit"
                             workTypes={typeOptions}
+                            currencyCode={currency}
                             initial={member}
                             photoSrc={photoSrc}
                             action={updateStaffAction.bind(null, member.id)}

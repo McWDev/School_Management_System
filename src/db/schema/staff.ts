@@ -6,6 +6,7 @@ import {
   foreignKey,
   index,
   integer,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -61,6 +62,8 @@ export const staff = pgTable(
     /** Area / district / city where the staff member lives. */
     location: text("location"),
     hireDate: date("hire_date"),
+    /** Monthly salary in the school currency; null when not on the payroll. */
+    salary: numeric("salary", { precision: 12, scale: 2 }),
     status: staffStatus("status").notNull().default("active"),
     /** Login account of this staff member, when they have login access. */
     userId: uuid("user_id"),
@@ -83,6 +86,7 @@ export const staff = pgTable(
     unique("staff_tenant_id_id_unique").on(table.tenantId, table.id),
     index("staff_tenant_status_idx").on(table.tenantId, table.status),
     index("staff_work_type_idx").on(table.workTypeId),
+    check("staff_salary_positive", sql`${table.salary} is null or ${table.salary} > 0`),
   ],
 );
 

@@ -162,6 +162,13 @@
       "when": 1792424178546,
       "tag": "0022_subject_marks",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792592076091,
+      "tag": "0023_staff_salaries",
+      "breakpoints": true
     }
   ]
 }
