@@ -13,7 +13,7 @@ import { saveStudentMarksAction } from "@/features/exams/actions";
 import { StudentMarksForm } from "@/features/exams/components/student-marks-form";
 import { getStudentResult } from "@/features/exams/repository";
 import { schoolToday } from "@/features/fees/repository";
-import { MARK_PARTS, PASS_MARK, SUBJECT_MAX } from "@/features/exams/schemas";
+import { describeParts, SUBJECT_MAX } from "@/features/exams/schemas";
 import { getOwnSchool, getSchoolLogoVersion } from "@/features/tenants/repository";
 import { getDb } from "@/db";
 import { getTenantContextFor } from "@/lib/authz";
@@ -136,6 +136,7 @@ export default async function StudentResultPage({
           <p className="text-sm text-muted-foreground">Add subjects on the Subjects page first.</p>
         ) : (
           <StudentMarksForm
+            parts={result.rules.parts}
             key={studentId}
             subjects={result.subjects}
             action={saveStudentMarksAction.bind(null, academicYearId, classId, studentId)}
@@ -187,7 +188,7 @@ export default async function StudentResultPage({
               <th scope="col" className="py-1.5">
                 Subject
               </th>
-              {MARK_PARTS.map((p) => (
+              {result.rules.parts.map((p) => (
                 <th key={p.key} scope="col" className="py-1.5 text-right">
                   {p.label} /{p.max}
                 </th>
@@ -201,7 +202,7 @@ export default async function StudentResultPage({
             {result.subjects.map((s) => (
               <tr key={s.id} className="border-b border-neutral-300">
                 <td className="py-1.5">{s.name}</td>
-                {MARK_PARTS.map((p) => (
+                {result.rules.parts.map((p) => (
                   <td key={p.key} className="py-1.5 text-right tabular-nums">
                     {s[p.key] ?? "—"}
                   </td>
@@ -212,7 +213,7 @@ export default async function StudentResultPage({
           </tbody>
           <tfoot>
             <tr className="font-bold">
-              <th scope="row" colSpan={MARK_PARTS.length + 1} className="py-2 text-left">
+              <th scope="row" colSpan={result.rules.parts.length + 1} className="py-2 text-left">
                 Total
               </th>
               <td className="py-2 text-right tabular-nums">
@@ -236,8 +237,8 @@ export default async function StudentResultPage({
           </p>
         </div>
         <p className="mt-2 text-xs text-neutral-600">
-          Each subject is out of 100 (Midterm 30 + Activities 20 + Final 50). A subject without
-          marks counts as 0. Pass: average of {PASS_MARK} or more.
+          Each subject is out of 100 ({describeParts(result.rules)}). A subject without marks counts
+          as 0. Pass: average of {result.rules.passMark} or more.
         </p>
         <div className="mt-12 flex justify-between gap-8 text-sm">
           <p className="min-w-48 border-t border-black pt-1 text-center">Class teacher</p>

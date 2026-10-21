@@ -13,6 +13,7 @@ import {
   Presentation,
   Receipt,
   School,
+  Settings,
   ShieldCheck,
   SlidersHorizontal,
   UserCog,
@@ -155,6 +156,14 @@ const moduleGroups: NavGroup[] = [
     title: "Settings",
     items: [
       {
+        title: "School Settings",
+        href: "/settings",
+        icon: Settings,
+        description: "General settings, branches, school profile, users and roles.",
+        // Shown to anyone who can open at least one section.
+        permission: ["settings.manage", "branches.read", "users.manage", "roles.manage"],
+      },
+      {
         title: "Academic Year",
         href: "/academic-years",
         icon: CalendarRange,
@@ -201,7 +210,7 @@ const moduleGroups: NavGroup[] = [
         title: "General Settings",
         href: "/settings/general",
         icon: SlidersHorizontal,
-        description: "Timezone, currency, grading and other preferences.",
+        description: "Exam rules and the prefixes of Student IDs, receipts and payslips.",
         permission: "settings.manage",
       },
     ],
@@ -213,7 +222,7 @@ export const allNavItems: NavItem[] = moduleGroups.flatMap((group) => group.item
 /**
  * Sidebar tabs, added one at a time as the product owner asks (2026-10-17),
  * in this order: Dashboard, Academic Year, Classes, Subjects, Students, Examinations, Student Fees,
- * School Staff.
+ * School Staff, School Settings.
  */
 const SIDEBAR_HREFS = [
   "/dashboard",
@@ -224,6 +233,7 @@ const SIDEBAR_HREFS = [
   "/exams",
   "/fees",
   "/staff",
+  "/settings",
 ];
 
 export const navGroups: NavGroup[] = [

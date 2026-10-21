@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  describeParts,
+  examRulesFrom,
   average,
   fromHundredths,
   marksInputSchema,
@@ -39,9 +41,24 @@ describe("marks arithmetic", () => {
     expect(average([])).toBe("0.0");
     const h = (...values: string[]) => values.map(toHundredths);
     // Pass/Fail uses the exact average: 49.95 fails.
-    expect(passes(h("50", "49.9"))).toBe(false);
-    expect(passes(h("50", "50"))).toBe(true);
-    expect(passes(h("100", "0"))).toBe(true);
-    expect(passes([])).toBe(false);
+    expect(passes(h("50", "49.9"), 50)).toBe(false);
+    expect(passes(h("50", "50"), 50)).toBe(true);
+    expect(passes(h("100", "0"), 50)).toBe(true);
+    expect(passes([], 50)).toBe(false);
+  });
+});
+
+describe("exam rules from settings", () => {
+  it("builds each part's maximum and a description", () => {
+    const rules = examRulesFrom({ passMark: 40, midtermMax: 20, activitiesMax: 20, finalMax: 60 });
+    expect(rules.passMark).toBe(40);
+    expect(rules.parts.map((p) => [p.key, p.max])).toEqual([
+      ["midterm", 20],
+      ["activities", 20],
+      ["final", 60],
+    ]);
+    expect(describeParts(rules)).toBe("Midterm 20 + Activities 20 + Final 60");
+    // A higher pass mark makes the same totals fail.
+    expect(passes([toHundredths("55")], 60)).toBe(false);
   });
 });

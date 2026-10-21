@@ -13,6 +13,7 @@ import { SchoolProfileForm } from "@/features/tenants/components/school-profile-
 import { getOwnSchool, getSchoolLogoVersion } from "@/features/tenants/repository";
 import { getTenantContextFor } from "@/lib/authz";
 import { hasAllBranches } from "@/lib/tenant-context";
+import { BackToSettings } from "@/features/settings/components/back-to-settings";
 
 export const metadata: Metadata = { title: "School Profile" };
 
@@ -30,6 +31,7 @@ export default async function SchoolProfilePage() {
 
   return (
     <>
+      <BackToSettings />
       <PageHeader
         title="School Profile"
         description={`These details appear at the top of report sheets and letters. School code: ${school.schoolCode}`}

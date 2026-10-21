@@ -26,6 +26,7 @@ import { BranchFormDialog } from "@/features/branches/components/branch-form-dia
 import { listBranches } from "@/features/branches/repository";
 import { getTenantContextFor } from "@/lib/authz";
 import { can, hasAllBranches } from "@/lib/tenant-context";
+import { BackToSettings } from "@/features/settings/components/back-to-settings";
 
 export const metadata: Metadata = { title: "Branches" };
 
@@ -47,6 +48,7 @@ export default async function BranchesPage({ searchParams }: PageProps<"/setting
 
   return (
     <>
+      <BackToSettings />
       <PageHeader title="Branches" description="Campuses and locations of your school." />
       <ListToolbar
         search={search}

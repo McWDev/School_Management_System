@@ -31,6 +31,7 @@ import { UserFormDialog } from "@/features/users/components/user-form-dialog";
 import { listSchoolUsers } from "@/features/users/repository";
 import { getTenantContextFor } from "@/lib/authz";
 import { hasAllBranches } from "@/lib/tenant-context";
+import { BackToSettings } from "@/features/settings/components/back-to-settings";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -54,6 +55,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/settings/u
 
   return (
     <>
+      <BackToSettings />
       <PageHeader
         title="Users"
         description="People who can sign in to your school, their roles and branches."

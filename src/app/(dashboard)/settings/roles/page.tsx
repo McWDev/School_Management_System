@@ -10,6 +10,7 @@ import { listRoles } from "@/features/roles/repository";
 import { getTenantContextFor } from "@/lib/authz";
 import { PERMISSIONS } from "@/lib/permissions/catalog";
 import { hasAllBranches } from "@/lib/tenant-context";
+import { BackToSettings } from "@/features/settings/components/back-to-settings";
 
 export const metadata: Metadata = { title: "Roles & Permissions" };
 
@@ -23,6 +24,7 @@ export default async function RolesPage() {
 
   return (
     <>
+      <BackToSettings />
       <PageHeader
         title="Roles & Permissions"
         description="Roles decide what people can do. Which branches they can see is set per user."

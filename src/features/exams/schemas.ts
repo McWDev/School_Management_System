@@ -1,17 +1,44 @@
 import { z } from "zod";
 import { uuidSchema } from "@/lib/validation/fields";
 
-/** The three parts of a subject's marks and their maximums (product owner, 2026-10-19). */
-export const MARK_PARTS = [
-  { key: "midterm", label: "Midterm", max: 30 },
-  { key: "activities", label: "Activities", max: 20 },
-  { key: "final", label: "Final", max: 50 },
+/** The three parts of a subject's marks (product owner, 2026-10-19). */
+export const MARK_PART_KEYS = [
+  { key: "midterm", label: "Midterm" },
+  { key: "activities", label: "Activities" },
+  { key: "final", label: "Final" },
 ] as const;
-export type MarkPart = (typeof MARK_PARTS)[number]["key"];
+export type MarkPart = (typeof MARK_PART_KEYS)[number]["key"];
 
-/** A subject total is out of 100; an average of 50 or more passes. */
+/** A subject total is out of 100 (the parts' maximums add up to 100). */
 export const SUBJECT_MAX = 100;
-export const PASS_MARK = 50;
+
+/** A school's exam rules: each part's maximum and the pass mark (General Settings). */
+export type ExamRules = {
+  passMark: number;
+  parts: { key: MarkPart; label: string; max: number }[];
+};
+
+export function examRulesFrom(settings: {
+  passMark: number;
+  midtermMax: number;
+  activitiesMax: number;
+  finalMax: number;
+}): ExamRules {
+  const max = {
+    midterm: settings.midtermMax,
+    activities: settings.activitiesMax,
+    final: settings.finalMax,
+  };
+  return {
+    passMark: settings.passMark,
+    parts: MARK_PART_KEYS.map((p) => ({ ...p, max: max[p.key] })),
+  };
+}
+
+/** "Midterm 30 + Activities 20 + Final 50", for explanations. */
+export function describeParts(rules: ExamRules) {
+  return rules.parts.map((p) => `${p.label} ${p.max}`).join(" + ");
+}
 
 /** Which class (and year) to work on, from the page's search params. */
 export const examSelectionSchema = z.object({
@@ -56,7 +83,10 @@ export function fromHundredths(value: number): string {
 
 /** A subject total from its parts (missing parts count as 0), in hundredths. */
 export function subjectTotal(parts: Partial<Record<MarkPart, string | null>>): number {
-  return MARK_PARTS.reduce((sum, p) => sum + (parts[p.key] ? toHundredths(parts[p.key]!) : 0), 0);
+  return MARK_PART_KEYS.reduce(
+    (sum, p) => sum + (parts[p.key] ? toHundredths(parts[p.key]!) : 0),
+    0,
+  );
 }
 
 /**
@@ -72,13 +102,11 @@ export function average(totalsHundredths: number[]): string {
   return `${Math.trunc(tenths / 10)}.${tenths % 10}`;
 }
 
-/**
- * Pass when the exact average of the subject totals is 50 or more.
- */
-export function passes(totalsHundredths: number[]) {
+/** Pass when the exact average of the subject totals reaches the pass mark. */
+export function passes(totalsHundredths: number[], passMark: number) {
   if (totalsHundredths.length === 0) return false;
   const sum = totalsHundredths.reduce((a, b) => a + b, 0);
-  return sum >= PASS_MARK * 100 * totalsHundredths.length;
+  return sum >= passMark * 100 * totalsHundredths.length;
 }
 
 /** One student's marks in several subjects; "" leaves a part empty. */

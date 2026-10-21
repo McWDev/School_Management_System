@@ -14,7 +14,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { IDLE, type FormResult } from "@/lib/form-result";
-import { fromHundredths, MARK_PARTS, SUBJECT_MAX, subjectTotal, type MarkPart } from "../schemas";
+import {
+  fromHundredths,
+  SUBJECT_MAX,
+  subjectTotal,
+  type ExamRules,
+  type MarkPart,
+} from "../schemas";
 
 type Subject = {
   id: string;
@@ -24,6 +30,8 @@ type Subject = {
 } & Record<MarkPart, string | null>;
 
 type Props = {
+  /** The school's parts and their maximums (General Settings). */
+  parts: ExamRules["parts"];
   subjects: Subject[];
   action: (prev: FormResult<unknown>, formData: FormData) => Promise<FormResult<unknown>>;
 };
@@ -34,7 +42,7 @@ const VALID = /^\d{1,2}(\.\d{1,2})?$/;
  * One student's marks in every subject. Subjects the user may not enter are
  * shown but not sent, so saving never touches them.
  */
-export function StudentMarksForm({ subjects, action }: Props) {
+export function StudentMarksForm({ parts, subjects, action }: Props) {
   const [state, formAction, pending] = useActionState(action, IDLE);
   const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
   const [values, setValues] = useState<Record<string, Record<MarkPart, string>>>(() =>
@@ -62,7 +70,7 @@ export function StudentMarksForm({ subjects, action }: Props) {
         <TableHeader>
           <TableRow>
             <TableHead>Subject</TableHead>
-            {MARK_PARTS.map((p) => (
+            {parts.map((p) => (
               <TableHead key={p.key} className="w-28">
                 {p.label} <span className="font-normal text-muted-foreground">/{p.max}</span>
               </TableHead>
@@ -75,10 +83,10 @@ export function StudentMarksForm({ subjects, action }: Props) {
         <TableBody>
           {subjects.map((subject) => {
             const current = values[subject.id];
-            const filled = MARK_PARTS.some((p) => current[p.key] !== "");
+            const filled = parts.some((p) => current[p.key] !== "");
             const total = subjectTotal(
               Object.fromEntries(
-                MARK_PARTS.map((p) => [p.key, VALID.test(current[p.key]) ? current[p.key] : null]),
+                parts.map((p) => [p.key, VALID.test(current[p.key]) ? current[p.key] : null]),
               ),
             );
             return (
@@ -92,7 +100,7 @@ export function StudentMarksForm({ subjects, action }: Props) {
                     </span>
                   )}
                 </TableCell>
-                {MARK_PARTS.map((p) => {
+                {parts.map((p) => {
                   const name = `${p.key}:${subject.id}`;
                   const error = errors[name]?.[0];
                   return (

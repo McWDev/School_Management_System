@@ -131,6 +131,6 @@ export const studentListFilterSchema = z.object({
 });
 
 /** "STU-0001" from 1. */
-export function formatStudentNumber(n: number) {
-  return `STU-${String(n).padStart(4, "0")}`;
+export function formatStudentNumber(n: number, prefix = "STU") {
+  return `${prefix}-${String(n).padStart(4, "0")}`;
 }

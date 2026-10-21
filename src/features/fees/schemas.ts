@@ -90,6 +90,6 @@ export const paymentListFilterSchema = z.object({
 });
 
 /** "RCT-000001" from 1. */
-export function formatReceiptNumber(n: number) {
-  return `RCT-${String(n).padStart(6, "0")}`;
+export function formatReceiptNumber(n: number, prefix = "RCT") {
+  return `${prefix}-${String(n).padStart(6, "0")}`;
 }

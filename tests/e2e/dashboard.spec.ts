@@ -20,7 +20,16 @@ async function demoStaffCounts() {
        group by s.status`,
     );
     const by = (status: string) => rows.find((r) => r.status === status)?.n ?? 0;
-    return { active: by("active"), inactive: by("inactive"), left: by("left") };
+    // The school can rename itself, so read its current name.
+    const {
+      rows: [school],
+    } = await client.query("select name from tenants where school_code = 'DEMO-HODAN'");
+    return {
+      active: by("active"),
+      inactive: by("inactive"),
+      left: by("left"),
+      name: school.name as string,
+    };
   } finally {
     await client.end();
   }
@@ -31,7 +40,9 @@ test("school admin sees a greeting and real staff figures", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     /^Good (morning|afternoon|evening), Hodan$/,
   );
-  await expect(page.getByRole("region", { name: "Welcome" })).toContainText("Hodan Demo School");
+  await expect(page.getByRole("region", { name: "Welcome" })).toContainText(
+    (await demoStaffCounts()).name,
+  );
 
   const tile = (label: string) => page.getByRole("link", { name: new RegExp(`^${label}`) });
   const figure = async (label: string) =>

@@ -38,8 +38,8 @@ export const salaryPaymentInputSchema = z.object({
 export type SalaryPaymentInput = z.infer<typeof salaryPaymentInputSchema>;
 
 /** "PAY-000001" from 1. */
-export function formatPayslipNumber(n: number) {
-  return `PAY-${String(n).padStart(6, "0")}`;
+export function formatPayslipNumber(n: number, prefix = "PAY") {
+  return `${prefix}-${String(n).padStart(6, "0")}`;
 }
 
 const isoDate = z

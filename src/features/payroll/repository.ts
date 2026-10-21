@@ -14,6 +14,7 @@ import {
   type SalaryPayment,
 } from "@/db/schema";
 import { monthSchema, reasonSchema } from "@/features/fees/schemas";
+import { getSchoolSettings } from "@/features/settings/repository";
 import { recordAudit } from "@/lib/audit";
 import {
   ConflictError,
@@ -222,7 +223,8 @@ async function nextPayslipNumber(tx: Transaction, tenantId: string) {
       set: { lastNumber: sql`${payslipCounters.lastNumber} + 1` },
     })
     .returning({ lastNumber: payslipCounters.lastNumber });
-  return formatPayslipNumber(row.lastNumber);
+  const { payslipPrefix } = await getSchoolSettings(tx, tenantId);
+  return formatPayslipNumber(row.lastNumber, payslipPrefix);
 }
 
 /**

@@ -4,7 +4,7 @@ import { signInAs } from "./helpers";
 
 /*
  * Role-based access with the synthetic demo users from `npm run db:seed`.
- * The sidebar currently shows Dashboard, Academic Year, Classes, Subjects, Students, Examinations, Student Fees and School Staff (product owner, 2026-10-18);
+ * The sidebar currently shows Dashboard, Academic Year, Classes, Subjects, Students, Examinations, Student Fees, School Staff and School Settings (product owner, 2026-10-18);
  * pages are opened by URL to prove the server still enforces access.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -30,6 +30,7 @@ test.afterAll(async () => {
 
 const SCHOOL_PAGES = [
   "/staff",
+  "/settings",
   "/classes",
   "/students",
   "/teachers",
@@ -56,7 +57,7 @@ async function expectTabs(page: Page, isMobile: boolean, tabs: string[]) {
   if (isMobile) await page.keyboard.press("Escape");
 }
 
-test("school admin sees Dashboard, Academic Year, Classes, Subjects, Students, Examinations, Student Fees and School Staff and can open every school page", async ({
+test("school admin sees Dashboard, Academic Year, Classes, Subjects, Students, Examinations, Student Fees, School Staff and School Settings and can open every school page", async ({
   page,
   isMobile,
 }) => {
@@ -70,6 +71,7 @@ test("school admin sees Dashboard, Academic Year, Classes, Subjects, Students, E
     "Examinations",
     "Student Fees",
     "School Staff",
+    "School Settings",
   ]);
   for (const path of SCHOOL_PAGES) {
     await page.goto(path);

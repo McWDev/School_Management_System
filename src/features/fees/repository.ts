@@ -30,6 +30,7 @@ import {
   type FeeCharge,
   type FeePayment,
 } from "@/db/schema";
+import { getSchoolSettings } from "@/features/settings/repository";
 import { latestEnrollment } from "@/features/students/latest-enrollment";
 import { recordAudit } from "@/lib/audit";
 import {
@@ -534,7 +535,8 @@ async function nextReceiptNumber(tx: Transaction, tenantId: string) {
       set: { lastNumber: sql`${feeReceiptCounters.lastNumber} + 1` },
     })
     .returning({ lastNumber: feeReceiptCounters.lastNumber });
-  return formatReceiptNumber(row.lastNumber);
+  const { receiptPrefix } = await getSchoolSettings(tx, tenantId);
+  return formatReceiptNumber(row.lastNumber, receiptPrefix);
 }
 
 /** Keep students.registration_fee_paid in step with the registration charge. */

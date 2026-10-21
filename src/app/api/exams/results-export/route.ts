@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { connection } from "next/server";
 import { getClassResults } from "@/features/exams/repository";
-import { examSelectionSchema, PASS_MARK } from "@/features/exams/schemas";
+import { describeParts, examSelectionSchema } from "@/features/exams/schemas";
 import { getOwnSchool } from "@/features/tenants/repository";
 import { getAccess } from "@/lib/authz";
 import { AppError } from "@/lib/errors";
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
   sheet.getCell(2, 1).font = { bold: true, size: 12 };
   sheet.mergeCells(3, 1, 3, columns.length);
   sheet.getCell(3, 1).value =
-    `Each subject is out of 100 (Midterm 30 + Activities 20 + Final 50). A subject without marks counts as 0. Pass: average of ${PASS_MARK} or more.`;
+    `Each subject is out of 100 (${describeParts(results.rules)}). A subject without marks counts as 0. Pass: average of ${results.rules.passMark} or more.`;
   sheet.getCell(3, 1).font = { italic: true, size: 9, color: { argb: "FF555555" } };
 
   const header = sheet.getRow(5);

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getClassResults } from "@/features/exams/repository";
-import { examSelectionSchema, PASS_MARK } from "@/features/exams/schemas";
+import { describeParts, examSelectionSchema } from "@/features/exams/schemas";
 import { getOwnSchool, getSchoolLogoVersion } from "@/features/tenants/repository";
 import { getTenantContextFor } from "@/lib/authz";
 import { NotFoundError } from "@/lib/errors";
@@ -69,7 +69,7 @@ export default async function ClassResultsPage({ searchParams }: PageProps<"/exa
       <div className="no-print">
         <PageHeader
           title={`Results · ${results.className}`}
-          description={`${results.academicYearName}. Each subject is out of 100 (Midterm 30 + Activities 20 + Final 50). Pass: average of ${PASS_MARK} or more.`}
+          description={`${results.academicYearName}. Each subject is out of 100 (${describeParts(results.rules)}). Pass: average of ${results.rules.passMark} or more.`}
         />
       </div>
 

@@ -11,6 +11,7 @@ import {
   subjectMarks,
   subjects,
 } from "@/db/schema";
+import { getSchoolSettings } from "@/features/settings/repository";
 import { recordAudit } from "@/lib/audit";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
 import { assertPermission, can, hasAllBranches, type TenantContext } from "@/lib/tenant-context";
@@ -19,7 +20,10 @@ import { uuidSchema } from "@/lib/validation/fields";
 import {
   average,
   fromHundredths,
-  MARK_PARTS,
+  describeParts,
+  examRulesFrom,
+  MARK_PART_KEYS,
+  type ExamRules,
   marksInputSchema,
   studentMarksInputSchema,
   passes,
@@ -178,7 +182,13 @@ export type MarksRow = {
 export async function getSubjectMarks(
   ctx: TenantContext,
   input: { academicYearId: string; classId: string; subjectId: string },
-): Promise<{ className: string; academicYearName: string; subjectName: string; rows: MarksRow[] }> {
+): Promise<{
+  className: string;
+  academicYearName: string;
+  subjectName: string;
+  rules: ExamRules;
+  rows: MarksRow[];
+}> {
   assertPermission(ctx, "exams.read");
   const yearId = parseId(input.academicYearId);
   const classId = parseId(input.classId);
@@ -214,9 +224,11 @@ export async function getSubjectMarks(
     .where(classStudentsWhere(ctx.tenantId, classId, yearId))
     .orderBy(sql`lower(${students.fullName})`, students.studentNumber);
   const tidy = (v: string | null) => (v === null ? null : fromHundredths(toHundredths(v)));
+  const rules = examRulesFrom(await getSchoolSettings(db, ctx.tenantId));
   return {
     ...names,
     subjectName: subject.name,
+    rules,
     rows: rows.map((r) => ({
       ...r,
       midterm: tidy(r.midterm),
@@ -265,10 +277,11 @@ export async function saveSubjectMarks(
           .where(classStudentsWhere(ctx.tenantId, classId, yearId))
       ).map((s) => s.id),
     );
+    const rules = examRulesFrom(await getSchoolSettings(tx, ctx.tenantId));
     const fieldErrors: Record<string, string[]> = {};
     for (const entry of entries) {
       if (!allowed.has(entry.studentId)) throw new NotFoundError();
-      for (const part of MARK_PARTS) {
+      for (const part of rules.parts) {
         const value = entry[part.key];
         if (value !== "" && toHundredths(value) > part.max * 100) {
           fieldErrors[`${part.key}:${entry.studentId}`] = [`Use at most ${part.max}.`];
@@ -277,12 +290,12 @@ export async function saveSubjectMarks(
     }
     if (Object.keys(fieldErrors).length) {
       throw new ValidationError(
-        "Midterm is out of 30, Activities out of 20 and Final out of 50.",
+        `Marks must be within each part's maximum (${describeParts(rules)}).`,
         fieldErrors,
       );
     }
 
-    const blank = (e: (typeof entries)[number]) => MARK_PARTS.every((p) => e[p.key] === "");
+    const blank = (e: (typeof entries)[number]) => MARK_PART_KEYS.every((p) => e[p.key] === "");
     const toSave = entries.filter((e) => !blank(e));
     const toClear = entries.filter(blank).map((e) => e.studentId);
     for (const entry of toSave) {
@@ -375,6 +388,7 @@ export async function countMarkedBySubject(
 export type ClassResults = {
   className: string;
   academicYearName: string;
+  rules: ExamRules;
   /** All Active subjects, plus inactive ones with marks here (all of them count). */
   subjects: { id: string; name: string }[];
   rows: {
@@ -405,6 +419,7 @@ export async function getClassResults(
   const classId = parseId(input.classId);
   const db = getDb();
   const names = await checkClassAndYear(db, ctx, classId, yearId);
+  const rules = examRulesFrom(await getSchoolSettings(db, ctx.tenantId));
   const [studentRows, markRows, activeSubjects] = await Promise.all([
     db
       .select({
@@ -474,11 +489,11 @@ export async function getClassResults(
       totals,
       total: fromHundredths(values.reduce((a, b) => a + b, 0)),
       average: avg,
-      result: passes(values) ? ("pass" as const) : ("fail" as const),
+      result: passes(values, rules.passMark) ? ("pass" as const) : ("fail" as const),
       missing,
     };
   });
-  return { ...names, subjects: subjectList, rows };
+  return { ...names, rules, subjects: subjectList, rows };
 }
 
 /** Whether a record has marks (academic history is never deleted). */
@@ -535,6 +550,7 @@ export type StudentResult = {
   /** Position in the class by total (1 = best); equal totals share a place. */
   position: number;
   classSize: number;
+  rules: ExamRules;
   /** Neighbours in the class list, for stepping through results. */
   previous: { id: string; fullName: string } | null;
   next: { id: string; fullName: string } | null;
@@ -634,6 +650,7 @@ export async function getStudentResult(
     }),
     total: row.total,
     maxTotal: results.subjects.length * 100,
+    rules: results.rules,
     average: row.average,
     result: row.result,
     position: 1 + results.rows.filter((r) => toHundredths(r.total) > mine).length,
@@ -686,9 +703,10 @@ export async function saveStudentMarks(
       }
     }
 
+    const rules = examRulesFrom(await getSchoolSettings(tx, ctx.tenantId));
     const fieldErrors: Record<string, string[]> = {};
     for (const entry of entries) {
-      for (const part of MARK_PARTS) {
+      for (const part of rules.parts) {
         const value = entry[part.key];
         if (value !== "" && toHundredths(value) > part.max * 100) {
           fieldErrors[`${part.key}:${entry.subjectId}`] = [`Use at most ${part.max}.`];
@@ -697,12 +715,12 @@ export async function saveStudentMarks(
     }
     if (Object.keys(fieldErrors).length) {
       throw new ValidationError(
-        "Midterm is out of 30, Activities out of 20 and Final out of 50.",
+        `Marks must be within each part's maximum (${describeParts(rules)}).`,
         fieldErrors,
       );
     }
 
-    const blank = (e: (typeof entries)[number]) => MARK_PARTS.every((p) => e[p.key] === "");
+    const blank = (e: (typeof entries)[number]) => MARK_PART_KEYS.every((p) => e[p.key] === "");
     const toSave = entries.filter((e) => !blank(e));
     const toClear = entries.filter(blank).map((e) => e.subjectId);
     for (const entry of toSave) {

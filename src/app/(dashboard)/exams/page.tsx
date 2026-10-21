@@ -58,7 +58,7 @@ export default async function ExamsPage({ searchParams }: PageProps<"/exams">) {
     <>
       <PageHeader
         title="Examinations"
-        description="Choose a class and a subject, then fill each student's Midterm (30), Activities (20) and Final (50)."
+        description="Choose a class and a subject, then fill each student's Midterm, Activities and Final."
         actions={
           year &&
           cls && (
@@ -160,6 +160,7 @@ export default async function ExamsPage({ searchParams }: PageProps<"/exams">) {
             </Card>
           ) : (
             <MarksSheetForm
+              parts={sheet.rules.parts}
               key={`${year.id}:${cls.id}:${subject.id}`}
               rows={sheet.rows}
               readOnly={!subject.canEnter}

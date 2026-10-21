@@ -33,6 +33,7 @@ import {
   syncRegistrationCharge,
 } from "@/features/fees/repository";
 import { hasMarks } from "@/features/exams/repository";
+import { getSchoolSettings } from "@/features/settings/repository";
 import { latestEnrollment } from "./latest-enrollment";
 import {
   formatStudentNumber,
@@ -355,7 +356,8 @@ async function nextStudentNumber(tx: Transaction, tenantId: string) {
       set: { lastNumber: sql`${studentNumberCounters.lastNumber} + 1` },
     })
     .returning({ lastNumber: studentNumberCounters.lastNumber });
-  return formatStudentNumber(row.lastNumber);
+  const { studentPrefix } = await getSchoolSettings(tx, tenantId);
+  return formatStudentNumber(row.lastNumber, studentPrefix);
 }
 
 /** The columns of the students table (class and year go to the enrollment). */
