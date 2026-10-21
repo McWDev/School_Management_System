@@ -176,6 +176,20 @@
       "when": 1792595951400,
       "tag": "0024_school_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792597934236,
+      "tag": "0025_student_portal",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792605460255,
+      "tag": "0026_student_portal_password",
+      "breakpoints": true
     }
   ]
 }

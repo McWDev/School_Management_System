@@ -23,6 +23,7 @@ export type FormState = {
   fieldErrors?: Record<string, string[]>;
   /** Echo back non-secret input so the form keeps it after an error. */
   email?: string;
+  schoolCode?: string;
   success?: boolean;
 };
 
@@ -59,6 +60,54 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   await setSessionCookie(result.token, result.expiresAt);
 
   redirect(safeRedirectPath(formData.get("next")));
+}
+
+/**
+ * Students Portal sign-in: school code + Student ID + 6-digit password. The
+ * login's username is "<school code>-<Student ID>" (usernames are platform-wide),
+ * so this is the normal sign-in with that username.
+ */
+export async function studentLoginAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const schoolCode = String(formData.get("schoolCode") ?? "").trim();
+  const studentId = String(formData.get("studentId") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const echo = { email: studentId, schoolCode };
+  if (!schoolCode || !studentId || !password) {
+    return {
+      ...echo,
+      error: "Enter your school code, Student ID and password.",
+      fieldErrors: {
+        ...(schoolCode ? {} : { schoolCode: ["Enter your school code."] }),
+        ...(studentId ? {} : { studentId: ["Enter your Student ID."] }),
+        ...(password ? {} : { password: ["Enter your password."] }),
+      },
+    };
+  }
+
+  let result;
+  try {
+    result = await login(
+      { identifier: `${schoolCode}-${studentId}`, password },
+      { ip: await getClientIp(), userAgent: await getUserAgent() },
+    );
+  } catch (error) {
+    logger.error("auth.login_error", { error });
+    return { ...echo, error: "Sign-in is temporarily unavailable. Please try again." };
+  }
+  if (!result.ok) {
+    return {
+      ...echo,
+      error:
+        result.reason === "invalid_credentials"
+          ? "The school code, Student ID or password is wrong."
+          : loginFailureMessage(result),
+    };
+  }
+
+  const previous = await readSessionCookie();
+  if (previous) await revokeSessionToken(previous, "replaced_by_login");
+  await setSessionCookie(result.token, result.expiresAt);
+  redirect("/portal");
 }
 
 export async function logoutAction(): Promise<void> {

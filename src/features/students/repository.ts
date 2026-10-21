@@ -9,6 +9,7 @@ import {
   studentPhotos,
   students,
   tenants,
+  users,
   type Student,
 } from "@/db/schema";
 import { recordAudit } from "@/lib/audit";
@@ -34,6 +35,11 @@ import {
 } from "@/features/fees/repository";
 import { hasMarks } from "@/features/exams/repository";
 import { getSchoolSettings } from "@/features/settings/repository";
+import {
+  insertPortalLogin,
+  preparePortalPassword,
+  syncPortalLogin,
+} from "@/features/portal/repository";
 import { latestEnrollment } from "./latest-enrollment";
 import {
   formatStudentNumber,
@@ -447,6 +453,8 @@ export async function createStudent(
     }
   }
 
+  // Every new student gets a Students Portal login with a generated password.
+  const portal = await preparePortalPassword();
   try {
     return await getDb().transaction(async (tx) => {
       const placement = await checkPlacement(tx, ctx, data, {
@@ -465,6 +473,11 @@ export async function createStudent(
         academicYearId: data.academicYearId,
       });
       if (checkedPhoto) await savePhoto(tx, ctx.tenantId, created.id, checkedPhoto);
+      const [school] = await tx
+        .select({ code: tenants.schoolCode })
+        .from(tenants)
+        .where(eq(tenants.id, ctx.tenantId));
+      await insertPortalLogin(tx, ctx.tenantId, school.code, { ...created, ...portal });
       const payment = await applyRegistrationFee(
         tx,
         ctx,
@@ -575,6 +588,8 @@ export async function updateStudent(
             ),
           );
       }
+      // Only Active students may sign in to the Students Portal.
+      await syncPortalLogin(tx, ctx.tenantId, updated);
       const payment = await applyRegistrationFee(
         tx,
         ctx,
@@ -664,6 +679,12 @@ export async function deleteStudent(ctx: TenantContext, studentId: string): Prom
       .where(and(eq(students.tenantId, ctx.tenantId), eq(students.id, id)))
       .returning();
     if (!removed) throw new NotFoundError();
+    // The portal login goes with the student.
+    if (removed.userId) {
+      await tx
+        .delete(users)
+        .where(and(eq(users.tenantId, ctx.tenantId), eq(users.id, removed.userId)));
+    }
     await recordAudit(
       {
         tenantId: ctx.tenantId,

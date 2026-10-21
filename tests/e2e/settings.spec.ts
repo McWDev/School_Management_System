@@ -19,15 +19,11 @@ test("School Settings lists its sections and General Settings checks the rules",
     .click();
   await expect(page.getByRole("heading", { level: 1, name: "School Settings" })).toBeVisible();
   const sections = page.getByRole("list", { name: "Settings sections" });
-  for (const name of [
-    "General Settings",
-    "School Branches",
-    "School Profile",
-    "Users",
-    "Roles & Permissions",
-  ]) {
+  for (const name of ["General Settings", "School Profile", "Users", "Roles & Permissions"]) {
     await expect(sections.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
   }
+  // Branches are not part of School Settings (product owner, 2026-10-21).
+  await expect(sections.getByRole("link", { name: /^School Branches/ })).toHaveCount(0);
 
   await sections.getByRole("link", { name: /^General Settings/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "General Settings" })).toBeVisible();
@@ -45,7 +41,7 @@ test("School Settings lists its sections and General Settings checks the rules",
   await expect(page.getByText("Settings saved.")).toBeVisible();
 
   // Each section links back to School Settings.
-  await page.goto("/settings/branches");
+  await page.goto("/settings/users");
   await page.getByRole("link", { name: "School Settings" }).first().click();
   await expect(page).toHaveURL(/\/settings$/);
 });
@@ -53,12 +49,10 @@ test("School Settings lists its sections and General Settings checks the rules",
 test.describe("other users", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("a branch admin sees only School Branches", async ({ page }) => {
+  test("a branch admin cannot open School Settings", async ({ page }) => {
     await signInAs(page, "north.admin@demo-hodan.example");
     await page.goto("/settings");
-    const sections = page.getByRole("list", { name: "Settings sections" });
-    await expect(sections.getByRole("link")).toHaveCount(1);
-    await expect(sections.getByRole("link", { name: /^School Branches/ })).toBeVisible();
+    await expect(page.getByText("You don't have access to this page")).toBeVisible();
     await page.goto("/settings/general");
     await expect(page.getByText("You don't have access to this page")).toBeVisible();
   });

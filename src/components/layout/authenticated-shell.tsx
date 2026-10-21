@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { tenants } from "@/db/schema";
+import { redirect } from "next/navigation";
+import { findPortalStudent } from "@/features/portal/repository";
 import { requireAccess } from "@/lib/authz";
 import { AccountMenu } from "./account-menu";
 import { AppShell } from "./app-shell";
@@ -12,6 +14,10 @@ import { AppShell } from "./app-shell";
  */
 export async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const access = await requireAccess();
+  // Students Portal logins have their own area.
+  if (access.tenant && access.permissions.size === 0 && (await findPortalStudent(access.user))) {
+    redirect("/portal");
+  }
   const [school] = access.user.tenantId
     ? await getDb()
         .select({ name: tenants.name })

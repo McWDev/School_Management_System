@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  Building2,
   ChevronRight,
+  GraduationCap,
   Landmark,
   ShieldCheck,
   SlidersHorizontal,
@@ -22,7 +22,7 @@ const SECTIONS: {
   href: string;
   title: string;
   description: string;
-  icon: typeof Building2;
+  icon: typeof Landmark;
   permission: Permission;
 }[] = [
   {
@@ -33,18 +33,18 @@ const SECTIONS: {
     permission: "settings.manage",
   },
   {
-    href: "/settings/branches",
-    title: "School Branches",
-    description: "Add, edit and archive your school's branches.",
-    icon: Building2,
-    permission: "branches.read",
-  },
-  {
     href: "/settings/school-profile",
     title: "School Profile",
     description: "The letterhead: name, logo, manager, contacts and motto.",
     icon: Landmark,
     permission: "settings.manage",
+  },
+  {
+    href: "/settings/students-portal",
+    title: "Students Portal",
+    description: "Give students a login to see their profile, results and fees.",
+    icon: GraduationCap,
+    permission: "students.update",
   },
   {
     href: "/settings/users",

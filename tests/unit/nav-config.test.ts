@@ -38,7 +38,7 @@ describe("navigation config", () => {
     expect(titles(["courses.read"])).toEqual(["Dashboard", "Subjects"]);
     expect(titles(["exams.read"])).toEqual(["Dashboard", "Examinations"]);
     expect(titles(["settings.manage"])).toEqual(["Dashboard", "School Settings"]);
-    expect(titles(["branches.read"])).toEqual(["Dashboard", "School Settings"]);
+    expect(titles(["branches.read"])).toEqual(["Dashboard"]);
   });
 
   it("shows Dashboard to every signed-in user", () => {

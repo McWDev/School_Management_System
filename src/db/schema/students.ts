@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "./_shared";
 import { academicYears } from "./academic-years";
+import { users } from "./auth";
 import { classes } from "./classes";
 import { tenants } from "./tenants";
 
@@ -81,6 +82,13 @@ export const students = pgTable(
       .notNull()
       .default("0"),
     registrationFeePaid: boolean("registration_fee_paid").notNull().default(false),
+    /** Students Portal login of the student, when given access (product owner, 2026-10-21). */
+    userId: uuid("user_id"),
+    /**
+     * The portal password, encrypted (AES-256-GCM) so the school can see it;
+     * sign-in checks users.password_hash. Never stored readable.
+     */
+    portalPasswordEncrypted: text("portal_password_encrypted"),
     ...timestamps,
   },
   (table) => [
@@ -90,6 +98,13 @@ export const students = pgTable(
     ),
     check("students_registration_fee", sql`${table.registrationFee} >= 0`),
     unique("students_tenant_number_unique").on(table.tenantId, table.studentNumber),
+    // The portal login must belong to the same school; one login per student.
+    foreignKey({
+      name: "students_user_fk",
+      columns: [table.tenantId, table.userId],
+      foreignColumns: [users.tenantId, users.id],
+    }).onDelete("restrict"),
+    unique("students_user_unique").on(table.userId),
     // Target for composite foreign keys (same-school guarantee).
     unique("students_tenant_id_id_unique").on(table.tenantId, table.id),
     index("students_tenant_status_idx").on(table.tenantId, table.status),

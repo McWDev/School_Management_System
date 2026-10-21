@@ -159,9 +159,9 @@ const moduleGroups: NavGroup[] = [
         title: "School Settings",
         href: "/settings",
         icon: Settings,
-        description: "General settings, branches, school profile, users and roles.",
+        description: "General settings, school profile, Students Portal, users and roles.",
         // Shown to anyone who can open at least one section.
-        permission: ["settings.manage", "branches.read", "users.manage", "roles.manage"],
+        permission: ["settings.manage", "students.update", "users.manage", "roles.manage"],
       },
       {
         title: "Academic Year",

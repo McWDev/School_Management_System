@@ -49,6 +49,12 @@ export function LoginForm() {
       >
         Forgot your password?
       </Link>
+      <Link
+        href="/student-login"
+        className="self-center text-sm text-primary underline-offset-4 hover:underline"
+      >
+        Student? Sign in with your Student ID
+      </Link>
     </form>
   );
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "students" ADD COLUMN "portal_password_encrypted" text;

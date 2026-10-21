@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * data access layer (src/lib/auth/session.ts) do that on the server.
  */
 const SESSION_COOKIES = ["__Host-sms_session", "sms_session"];
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = ["/login", "/student-login", "/forgot-password", "/reset-password"];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
